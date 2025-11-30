@@ -47,6 +47,40 @@ wan-watcher/
   .gitignore
 ```
 
+## ESP32 Wi-Fi Configuration
+
+Inside `esp32/src/`, you will find:
+
+## ESP32 Wi-Fi Configuration
+
+Inside `esp32/src/`, you will find:
+
+```
+wifi_config.h.example
+```
+
+Copy it to `wifi_config.h` and edit your SSID/password:
+
+```sh
+cp esp32/src/wifi_config.h.example esp32/src/wifi_config.h
+```
+
+`wifi_config.h` is intentionally **ignored by git** and should never be committed.
+
+Each ESP32 assigns itself a unique hostname based on its MAC address:
+
+```
+wan-watcher-xxxxxx
+```
+
+The device also exposes itself via mDNS (Bonjour/Avahi):
+
+```
+http://wan-watcher-xxxxxx.local/
+```
+
+Your operating system must support mDNS for this to work (macOS: built-in, Linux: Avahi, Windows: Bonjour).
+
 ---
 
 ## Installation (pfSense script)
@@ -92,13 +126,20 @@ The script updates WAN status and usage files every ~30 seconds.
 * [x] Auto-detect WAN interfaces
 * [x] Calculate per-WAN bandwidth usage
 * [ ] Implement HTTP client to POST metrics to ESP32 (REST-ish API)
+* [ ] Multi-WAN POST support
+* [ ] Heartbeat POSTs
 
 ### ESP32 Side
 
-* [ ] Basic firmware project scaffolding
+* [x] Basic PlatformIO firmware project scaffolding
+* [x] Wi-Fi connect loop with status LED
+* [x] Dynamic hostname + mDNS support
+* [x] HTTP server + routes
+* [x] WAN1 LED state machine (UP / DEGRADED / DOWN)
+* [x] Web UI with simple color indicators
 * [ ] REST-ish HTTP API endpoint to receive metrics from pfSense
-* [ ] LED logic (green/yellow/red/unknown)
-* [ ] Heartbeat timeout LED
+* [ ] pfSense heartbeat timeout LED
+* [ ] Multi-WAN support
 * [ ] 7-segment display driver (phase 2)
 * [ ] Display modes (latency / download / upload / loss) (phase 2)
 * [ ] Button input for cycling modes (phase 2)
