@@ -20,12 +20,18 @@ wan-watcher collects real-time WAN metrics from pfSense (latency, loss, jitter, 
   * Supports multiple dpinger instances (e.g., WAN + WAN2)
   * Tracks per-WAN state and usage separately
 
-* **ESP32 indicator panel** (planned / in progress)
+* **ESP32 indicator panel**
 
-  * Consumes WAN status and metrics from pfSense
-  * LED indicators for WAN state (up / degraded / down / unknown)
-  * Heartbeat indication when pfSense stops reporting
-  * 7-segment display support for latency / bandwidth (phase 2)
+  * LED indicators for WAN state (UP / DEGRADED / DOWN)
+  * Heartbeat LED showing how recent the last pfSense update was:
+
+    * `< 30s`: OFF
+    * `30–60s`: slow blink
+    * `60–180s`: fast blink
+    * `>= 3m`: solid ON + WAN forced DOWN
+  * Web UI showing hostname, IP, last update time, and LED mapping
+  * Receives state updates via REST-ish API (`POST /api/wan1/...`)
+  * 7-segment display support planned (phase 2)
 
 ## Hardware (planned build)
 
@@ -47,9 +53,7 @@ wan-watcher/
   .gitignore
 ```
 
-## ESP32 Wi-Fi Configuration
-
-Inside `esp32/src/`, you will find:
+---
 
 ## ESP32 Wi-Fi Configuration
 
@@ -61,7 +65,7 @@ wifi_config.h.example
 
 Copy it to `wifi_config.h` and edit your SSID/password:
 
-```sh
+```
 cp esp32/src/wifi_config.h.example esp32/src/wifi_config.h
 ```
 
@@ -79,7 +83,7 @@ The device also exposes itself via mDNS (Bonjour/Avahi):
 http://wan-watcher-xxxxxx.local/
 ```
 
-Your operating system must support mDNS for this to work (macOS: built-in, Linux: Avahi, Windows: Bonjour).
+Your OS must support mDNS for this to work (macOS: built-in, Linux: Avahi, Windows: Bonjour).
 
 ---
 
@@ -87,22 +91,22 @@ Your operating system must support mDNS for this to work (macOS: built-in, Linux
 
 1. Copy `pf/wan_watcher_poll.sh` to:
 
-   ```sh
-   /usr/local/bin/wan_watcher_poll.sh
-   ```
+```
+/usr/local/bin/wan_watcher_poll.sh
+```
 
 2. Make it executable:
 
-   ```sh
-   chmod +x /usr/local/bin/wan_watcher_poll.sh
-   ```
+```
+chmod +x /usr/local/bin/wan_watcher_poll.sh
+```
 
 3. Add two cron jobs (via pfSense Cron package):
 
-   ```
-   * * * * * /usr/local/bin/wan_watcher_poll.sh 0
-   * * * * * /usr/local/bin/wan_watcher_poll.sh 30
-   ```
+```
+* * * * * /usr/local/bin/wan_watcher_poll.sh 0
+* * * * * /usr/local/bin/wan_watcher_poll.sh 30
+```
 
 The script updates WAN status and usage files every ~30 seconds.
 
@@ -136,9 +140,10 @@ The script updates WAN status and usage files every ~30 seconds.
 * [x] Dynamic hostname + mDNS support
 * [x] HTTP server + routes
 * [x] WAN1 LED state machine (UP / DEGRADED / DOWN)
-* [x] Web UI with simple color indicators
-* [ ] REST-ish HTTP API endpoint to receive metrics from pfSense
-* [ ] pfSense heartbeat timeout LED
+* [x] Heartbeat LED (off / slow blink / fast blink / solid)
+* [x] Auto-timeout WAN1 to DOWN if no update for 3 minutes
+* [x] Web UI with color indicators and curl examples
+* [ ] REST-ish HTTP API endpoint to receive full metrics (not just state)
 * [ ] Multi-WAN support
 * [ ] 7-segment display driver (phase 2)
 * [ ] Display modes (latency / download / upload / loss) (phase 2)
