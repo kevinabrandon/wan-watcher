@@ -102,4 +102,5 @@ void setup() {
 
 void loop() {
     server.handleClient();
+    wan1_heartbeat_check();
 }
