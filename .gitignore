@@ -1,0 +1,12 @@
+# Local WiFi credentials (never commit)
+esp32/src/wifi_config.h
+
+# PlatformIO build and IDE files
+esp32/.pio/
+esp32/.vscode/
+esp32/.clang_complete
+esp32/.gcc-flags.json
+
+# OS junk
+.DS_Store
+Thumbs.db
