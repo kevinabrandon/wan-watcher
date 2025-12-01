@@ -73,10 +73,9 @@ static void heartbeat_set(bool on) {
     digitalWrite(LED_HEARTBEAT_PIN, on ? HIGH : LOW);
 }
 
-// internal: update heartbeat LED pattern based on elapsed
 static void heartbeat_update_pattern(unsigned long now, unsigned long elapsed_ms) {
-    // No updates yet or updates very recent (< 30s): LED OFF
-    if (g_wan1_last_update_ms == 0 || elapsed_ms < 30UL * 1000UL) {
+    // Very recent (< 45s since last update): LED OFF
+    if (elapsed_ms < 45UL * 1000UL) {
         heartbeat_set(false);
         return;
     }
@@ -87,14 +86,12 @@ static void heartbeat_update_pattern(unsigned long now, unsigned long elapsed_ms
         return;
     }
 
-    // Choose blink interval:
-    // 30–60s: slow blink
-    // 60–180s: fast blink
+    // 45–90s: slow blink, 90–180s: fast blink (unchanged)
     unsigned long interval_ms;
-    if (elapsed_ms < 60UL * 1000UL) {
-        interval_ms = 500UL;   // slow blink
+    if (elapsed_ms < 90UL * 1000UL) {
+        interval_ms = 500UL;
     } else {
-        interval_ms = 200UL;   // faster blink
+        interval_ms = 200UL;
     }
 
     if (now - g_hb_last_toggle_ms >= interval_ms) {
@@ -107,8 +104,8 @@ void wan1_heartbeat_check() {
     unsigned long now = millis();
 
     if (g_wan1_last_update_ms == 0) {
-        // Never received an update: treat as "no heartbeat yet"
-        heartbeat_update_pattern(now, 0);
+        // Never received an update: indicate "no heartbeat yet" with solid ON
+        heartbeat_set(true);
         return;
     }
 
@@ -138,7 +135,7 @@ void leds_init() {
 
     // Default to DOWN on boot; heartbeat off
     wan1_set_state(WAN1_DOWN);
-    heartbeat_set(false);
+    heartbeat_set(true);
 
     g_wan1_last_update_ms = 0;
     g_wan1_timed_out = false;
