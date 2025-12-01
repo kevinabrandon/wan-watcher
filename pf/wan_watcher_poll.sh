@@ -25,7 +25,7 @@ normalize_state() {
     echo "unknown"
   elif [ "$LOSS" -eq 100 ] 2>/dev/null; then
     echo "down"
-  elif [ "$LOSS" -gt 0 ] 2>/dev/null; then
+  elif [ "$LOSS" -gt 5 ] 2>/dev/null; then
     echo "degraded"
   else
     echo "up"
