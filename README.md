@@ -23,9 +23,9 @@ wan-watcher collects real-time WAN metrics from pfSense (latency, loss, jitter, 
   * Web UI showing hostname, IP, last update time, and LED mapping
   * LED indicators for WAN state (UP / DEGRADED / DOWN)
   * Heartbeat LED showing how recent the last pfSense update was:
-    * `< 30s`: OFF
-    * `30–60s`: slow blink
-    * `60–180s`: fast blink
+    * `< 45s`: OFF
+    * `45–90s`: slow blink
+    * `90–180s`: fast blink
     * `>= 3m`: solid ON + WAN forced DOWN
   * 7-segment display support planned (phase 2)
 
