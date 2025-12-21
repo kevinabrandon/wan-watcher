@@ -11,9 +11,6 @@
 
 WebServer server(80);
 
-// Use GPIO2 as a status LED (WiFi state)
-static const int STATUS_LED_PIN = 2;
-
 // start mDNS
 void startMDNS(const char* hostname) {
     if (MDNS.begin(hostname)) {
@@ -29,8 +26,7 @@ void startMDNS(const char* hostname) {
 
 // Blocking WiFi connect with infinite retry + status LED blink
 static void connectToWiFiBlocking() {
-    pinMode(STATUS_LED_PIN, OUTPUT);
-    digitalWrite(STATUS_LED_PIN, LOW);  // start off
+    led_status1.set(false);  // start off
 
     String hostname = build_hostname();
     Serial.printf("Hostname: %s\n", hostname.c_str());
@@ -52,7 +48,7 @@ static void connectToWiFiBlocking() {
             attempts++;
 
             // Blink status LED while attempting
-            digitalWrite(STATUS_LED_PIN, !digitalRead(STATUS_LED_PIN));
+            led_status1.set(!led_status1.state());
 
             Serial.print(".");
         }
@@ -65,7 +61,7 @@ static void connectToWiFiBlocking() {
             Serial.println(WiFi.localIP());
 
             // Connected: LED ON
-            digitalWrite(STATUS_LED_PIN, HIGH);
+            led_status1.set(true);
             Serial.printf("Starting mDNS at %s.local\n", hostname.c_str());
             startMDNS(hostname.c_str());
             return;
@@ -74,7 +70,7 @@ static void connectToWiFiBlocking() {
         // This attempt failed: indicate error (fast blink a few times)
         Serial.println("WiFi connect FAILED, retrying...");
         for (int i = 0; i < 6; ++i) {  // ~1.5s of fast blink
-            digitalWrite(STATUS_LED_PIN, !digitalRead(STATUS_LED_PIN));
+            led_status1.set(!led_status1.state());
             delay(250);
         }
 
@@ -88,10 +84,10 @@ void setup() {
     Serial.println();
     Serial.println("ESP32 LED webserver starting...");
 
-    // Initialize LED pins (5, 18, 19) and set them OFF
+    // Initialize I2C, MCP23017, and all LEDs
     leds_init();
 
-    // Block here until WiFi is actually up; STATUS_LED_PIN shows progress
+    // Block here until WiFi is actually up; led_status1 shows progress
     connectToWiFiBlocking();
 
     // Only now that WiFi is up, start HTTP server and routes
@@ -103,4 +99,5 @@ void setup() {
 void loop() {
     server.handleClient();
     wan1_heartbeat_check();
+    display_update();
 }

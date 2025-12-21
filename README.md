@@ -21,21 +21,37 @@ wan-watcher collects real-time WAN metrics from pfSense (latency, loss, jitter, 
 * **ESP32 indicator panel**
   * Receives state updates via REST-ish API (`POST /api/wan1/...`)
   * Web UI showing hostname, IP, last update time, and LED mapping
-  * LED indicators for WAN state (UP / DEGRADED / DOWN)
+  * LED indicators for WAN state (UP / DEGRADED / DOWN) via MCP23017 I2C expander
   * Heartbeat LED showing how recent the last pfSense update was:
     * `< 45s`: OFF
     * `45–90s`: slow blink
     * `90–180s`: fast blink
     * `>= 3m`: solid ON + WAN forced DOWN
-  * 7-segment display support planned (phase 2)
+  * 7-segment display showing seconds since last update
 
-## Hardware (planned build)
+## Hardware
 
 * 1× Olimex ESP32-POE-ISO
-* 1× power switch
-* 12× panel-mount 5V LEDs
-* 1× push switch (phase 2)
-* 2× 7-segment displays (phase 2)
+* 1× MCP23017 I2C GPIO expander (address 0x20)
+* 1× Adafruit 4-digit 7-segment display (HT16K33, address 0x71)
+* Panel-mount LEDs for WAN status indicators
+
+### I2C Wiring (Stemma QT / Qwiic)
+
+| Signal | GPIO | Wire Color |
+|--------|------|------------|
+| SDA    | 13   | Blue       |
+| SCL    | 16   | Yellow     |
+
+### Pin Mapping
+
+| Pin | Type | Function |
+|-----|------|----------|
+| MCP 0 | MCP23017 | WAN1 UP (green) |
+| MCP 1 | MCP23017 | WAN1 DEGRADED (yellow) |
+| MCP 2 | MCP23017 | WAN1 DOWN (red) |
+| GPIO 4 | ESP32 | WiFi status LED |
+| GPIO 5 | ESP32 | Heartbeat LED |
 
 ## Repository Structure
 
@@ -139,10 +155,13 @@ timestamp	state	loss_pct	lat_ms	std_ms	down_mbps	up_mbps
 * [x] Heartbeat LED (off / slow blink / fast blink / solid)
 * [x] Auto-timeout WAN1 to DOWN if no update for 3 minutes
 * [x] Web UI with color indicators and curl examples
+* [x] MCP23017 GPIO expander for LED control
+* [x] Led abstraction class (supports GPIO and MCP pins)
+* [x] 7-segment display showing seconds since last update
 * [ ] Multi-WAN support
-* [ ] 7-segment display driver (phase 2)
-* [ ] Display modes (latency / download / upload / loss) (phase 2)
-* [ ] Button input for cycling modes (phase 2)
+* [ ] Display modes (latency / download / upload / loss)
+* [ ] Button input for cycling modes
+* [ ] Second 7-segment display for additional metrics
 
 ---
 

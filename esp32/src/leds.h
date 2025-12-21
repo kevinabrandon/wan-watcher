@@ -2,11 +2,14 @@
 #pragma once
 
 #include <Arduino.h>
+#include "led.h"
 
-extern const int LED_WAN1_UP_PIN;
-extern const int LED_WAN1_DEGRADED_PIN;
-extern const int LED_WAN1_DOWN_PIN;
-extern const int LED_HEARTBEAT_PIN;
+// LED objects (defined in leds.cpp)
+extern Led led_wan1_up;
+extern Led led_wan1_degraded;
+extern Led led_wan1_down;
+extern Led led_heartbeat;
+extern Led led_status1;
 
 enum Wan1State {
     WAN1_DOWN = 0,
@@ -16,9 +19,6 @@ enum Wan1State {
 
 void leds_init();
 
-void set_led(int pin, bool on);
-bool led_state(int pin);
-
 void wan1_set_state(Wan1State state);
 Wan1State wan1_get_state();
 
@@ -26,3 +26,6 @@ Wan1State wan1_get_state();
 void wan1_record_update();          // call when a valid update is received
 unsigned long wan1_last_update_ms(); // 0 = never
 void wan1_heartbeat_check();        // call regularly from loop()
+
+// 7-segment display
+void display_update();              // update display with seconds since last update

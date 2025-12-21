@@ -139,17 +139,20 @@ static String root_page_html() {
 
 <hr>
 
-<h3>LED Mapping (read-only)</h3>
+<h3>LED Mapping (MCP23017)</h3>
 <ul>
-  <li>GPIO )";
-    html += String(LED_WAN1_UP_PIN);
+  <li>MCP pin )";
+    html += String(led_wan1_up.pin());
     html += R"( → WAN1 UP (green)</li>
-  <li>GPIO )";
-    html += String(LED_WAN1_DEGRADED_PIN);
+  <li>MCP pin )";
+    html += String(led_wan1_degraded.pin());
     html += R"( → WAN1 DEGRADED (yellow)</li>
-  <li>GPIO )";
-    html += String(LED_WAN1_DOWN_PIN);
+  <li>MCP pin )";
+    html += String(led_wan1_down.pin());
     html += R"( → WAN1 DOWN (red)</li>
+  <li>MCP pin )";
+    html += String(led_heartbeat.pin());
+    html += R"( → Heartbeat</li>
 </ul>
 
 <hr>

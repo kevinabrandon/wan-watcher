@@ -1,18 +1,37 @@
 // leds.cpp
 #include <Arduino.h>
+#include <Wire.h>
+#include <Adafruit_MCP23X17.h>
+#include <Adafruit_LEDBackpack.h>
 #include "leds.h"
 
-// Pin assignments
-const int LED_WAN1_UP_PIN        = 5;
-const int LED_WAN1_DEGRADED_PIN  = 18;
-const int LED_WAN1_DOWN_PIN      = 19;
-const int LED_HEARTBEAT_PIN      = 4;   // heartbeat LED
+// I2C pins for Olimex ESP32-POE-ISO
+static const int I2C_SDA = 13;
+static const int I2C_SCL = 16;
+static const uint8_t MCP23017_ADDR = 0x20;
+static const uint8_t DISPLAY_ADDR = 0x71;
+
+// MCP23017 expander
+static Adafruit_MCP23X17 mcp;
+
+// 7-segment display
+static Adafruit_7segment display;
+static bool g_display_ok = false;
+
+// MCP-based LEDs (pins 0-2)
+Led led_wan1_up(0, LedPinType::MCP, &mcp);
+Led led_wan1_degraded(1, LedPinType::MCP, &mcp);
+Led led_wan1_down(2, LedPinType::MCP, &mcp);
+
+// GPIO-based LEDs
+Led led_status1(4, LedPinType::GPIO);
+Led led_heartbeat(5, LedPinType::GPIO);
 
 // Track current WAN1 state
 static Wan1State g_wan1_state = WAN1_DOWN;
 
 // Heartbeat tracking
-static unsigned long g_wan1_last_update_ms = 0;          // 0 = never
+static unsigned long g_wan1_last_update_ms = 0;
 static bool          g_wan1_timed_out      = false;
 static const unsigned long WAN1_TIMEOUT_MS = 3UL * 60UL * 1000UL; // 3 minutes
 
@@ -20,36 +39,30 @@ static const unsigned long WAN1_TIMEOUT_MS = 3UL * 60UL * 1000UL; // 3 minutes
 static unsigned long g_hb_last_toggle_ms = 0;
 static bool          g_hb_led_on         = false;
 
-void set_led(int pin, bool on) {
-    digitalWrite(pin, on ? HIGH : LOW);
-    Serial.printf("GPIO %d -> %s\n", pin, on ? "ON" : "OFF");
-}
-
-bool led_state(int pin) {
-    return (digitalRead(pin) == HIGH);
-}
-
 void wan1_set_state(Wan1State state) {
     g_wan1_state = state;
 
     switch (state) {
         case WAN1_UP:
-            set_led(LED_WAN1_UP_PIN, true);
-            set_led(LED_WAN1_DEGRADED_PIN, false);
-            set_led(LED_WAN1_DOWN_PIN, false);
+            led_wan1_up.set(true);
+            led_wan1_degraded.set(false);
+            led_wan1_down.set(false);
+            Serial.println("WAN1 -> UP");
             break;
 
         case WAN1_DEGRADED:
-            set_led(LED_WAN1_UP_PIN, false);
-            set_led(LED_WAN1_DEGRADED_PIN, true);
-            set_led(LED_WAN1_DOWN_PIN, false);
+            led_wan1_up.set(false);
+            led_wan1_degraded.set(true);
+            led_wan1_down.set(false);
+            Serial.println("WAN1 -> DEGRADED");
             break;
 
         case WAN1_DOWN:
         default:
-            set_led(LED_WAN1_UP_PIN, false);
-            set_led(LED_WAN1_DEGRADED_PIN, false);
-            set_led(LED_WAN1_DOWN_PIN, true);
+            led_wan1_up.set(false);
+            led_wan1_degraded.set(false);
+            led_wan1_down.set(true);
+            Serial.println("WAN1 -> DOWN");
             break;
     }
 }
@@ -70,7 +83,7 @@ unsigned long wan1_last_update_ms() {
 // internal: set heartbeat LED state (no logging spam)
 static void heartbeat_set(bool on) {
     g_hb_led_on = on;
-    digitalWrite(LED_HEARTBEAT_PIN, on ? HIGH : LOW);
+    led_heartbeat.set(on);
 }
 
 static void heartbeat_update_pattern(unsigned long now, unsigned long elapsed_ms) {
@@ -86,7 +99,7 @@ static void heartbeat_update_pattern(unsigned long now, unsigned long elapsed_ms
         return;
     }
 
-    // 45–90s: slow blink, 90–180s: fast blink (unchanged)
+    // 45–90s: slow blink, 90–180s: fast blink
     unsigned long interval_ms;
     if (elapsed_ms < 90UL * 1000UL) {
         interval_ms = 500UL;
@@ -128,16 +141,58 @@ void wan1_heartbeat_check() {
 }
 
 void leds_init() {
-    pinMode(LED_WAN1_UP_PIN,       OUTPUT);
-    pinMode(LED_WAN1_DEGRADED_PIN, OUTPUT);
-    pinMode(LED_WAN1_DOWN_PIN,     OUTPUT);
-    pinMode(LED_HEARTBEAT_PIN,     OUTPUT);
+    // Initialize I2C for MCP23017
+    Wire.begin(I2C_SDA, I2C_SCL);
 
-    // Default to DOWN on boot; heartbeat off
-    wan1_set_state(WAN1_DOWN);
-    heartbeat_set(true);
+    if (!mcp.begin_I2C(MCP23017_ADDR, &Wire)) {
+        Serial.println("ERROR: MCP23017 not found!");
+    } else {
+        Serial.println("MCP23017 initialized");
+        // Immediately clear all 16 MCP pins
+        for (int i = 0; i < 16; i++) {
+            mcp.pinMode(i, OUTPUT);
+            mcp.digitalWrite(i, LOW);
+        }
+    }
 
+    // Initialize 7-segment display
+    if (!display.begin(DISPLAY_ADDR, &Wire)) {
+        Serial.println("ERROR: 7-segment display not found!");
+        g_display_ok = false;
+    } else {
+        Serial.println("7-segment display initialized");
+        g_display_ok = true;
+        display.clear();
+        display.writeDisplay();
+        display.setBrightness(8);
+    }
+
+    // Initialize GPIO-based LEDs
+    led_status1.begin();
+    led_heartbeat.begin();
+
+    // State tracking init (LEDs stay off until first update or timeout)
     g_wan1_last_update_ms = 0;
     g_wan1_timed_out = false;
     g_hb_last_toggle_ms = 0;
+    g_wan1_state = WAN1_DOWN;
+}
+
+void display_update() {
+    if (!g_display_ok) return;
+
+    if (g_wan1_last_update_ms == 0) {
+        // Never updated - show actual dashes (segment G = 0x40)
+        display.writeDigitRaw(0, 0x40);
+        display.writeDigitRaw(1, 0x40);
+        display.writeDigitRaw(3, 0x40);  // position 2 is the colon
+        display.writeDigitRaw(4, 0x40);
+    } else {
+        unsigned long elapsed_secs = (millis() - g_wan1_last_update_ms) / 1000UL;
+        if (elapsed_secs > 9999) {
+            elapsed_secs = 9999;  // cap at 4 digits
+        }
+        display.print((int)elapsed_secs, DEC);
+    }
+    display.writeDisplay();
 }
