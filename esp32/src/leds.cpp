@@ -27,57 +27,38 @@ Led led_wan1_down(2, LedPinType::MCP, &mcp);
 Led led_status1(4, LedPinType::GPIO);
 Led led_heartbeat(5, LedPinType::GPIO);
 
-// Track current WAN1 state
-static Wan1State g_wan1_state = WAN1_DOWN;
-
 // Heartbeat tracking
-static unsigned long g_wan1_last_update_ms = 0;
-static bool          g_wan1_timed_out      = false;
+static bool g_wan1_timed_out = false;
 static const unsigned long WAN1_TIMEOUT_MS = 3UL * 60UL * 1000UL; // 3 minutes
 
 // Heartbeat LED blink bookkeeping
 static unsigned long g_hb_last_toggle_ms = 0;
-static bool          g_hb_led_on         = false;
+static bool g_hb_led_on = false;
 
-void wan1_set_state(Wan1State state) {
-    g_wan1_state = state;
-
+void wan1_set_leds(WanState state) {
     switch (state) {
-        case WAN1_UP:
+        case WanState::UP:
             led_wan1_up.set(true);
             led_wan1_degraded.set(false);
             led_wan1_down.set(false);
-            Serial.println("WAN1 -> UP");
+            Serial.println("WAN1 LEDs -> UP");
             break;
 
-        case WAN1_DEGRADED:
+        case WanState::DEGRADED:
             led_wan1_up.set(false);
             led_wan1_degraded.set(true);
             led_wan1_down.set(false);
-            Serial.println("WAN1 -> DEGRADED");
+            Serial.println("WAN1 LEDs -> DEGRADED");
             break;
 
-        case WAN1_DOWN:
+        case WanState::DOWN:
         default:
             led_wan1_up.set(false);
             led_wan1_degraded.set(false);
             led_wan1_down.set(true);
-            Serial.println("WAN1 -> DOWN");
+            Serial.println("WAN1 LEDs -> DOWN");
             break;
     }
-}
-
-Wan1State wan1_get_state() {
-    return g_wan1_state;
-}
-
-void wan1_record_update() {
-    g_wan1_last_update_ms = millis();
-    g_wan1_timed_out = false;
-}
-
-unsigned long wan1_last_update_ms() {
-    return g_wan1_last_update_ms;
 }
 
 // internal: set heartbeat LED state (no logging spam)
@@ -115,14 +96,15 @@ static void heartbeat_update_pattern(unsigned long now, unsigned long elapsed_ms
 
 void wan1_heartbeat_check() {
     unsigned long now = millis();
+    const WanMetrics& m = wan_metrics_get(1);
 
-    if (g_wan1_last_update_ms == 0) {
+    if (m.last_update_ms == 0) {
         // Never received an update: indicate "no heartbeat yet" with solid ON
         heartbeat_set(true);
         return;
     }
 
-    unsigned long elapsed = now - g_wan1_last_update_ms;
+    unsigned long elapsed = now - m.last_update_ms;
 
     // Update heartbeat LED pattern first
     heartbeat_update_pattern(now, elapsed);
@@ -132,11 +114,11 @@ void wan1_heartbeat_check() {
         if (!g_wan1_timed_out) {
             g_wan1_timed_out = true;
             Serial.println("WAN1 heartbeat timeout -> forcing DOWN");
+            wan1_set_leds(WanState::DOWN);
         }
-
-        if (g_wan1_state != WAN1_DOWN) {
-            wan1_set_state(WAN1_DOWN);
-        }
+    } else {
+        // Reset timeout flag when we get updates
+        g_wan1_timed_out = false;
     }
 }
 
@@ -171,24 +153,24 @@ void leds_init() {
     led_status1.begin();
     led_heartbeat.begin();
 
-    // State tracking init (LEDs stay off until first update or timeout)
-    g_wan1_last_update_ms = 0;
+    // Reset heartbeat state
     g_wan1_timed_out = false;
     g_hb_last_toggle_ms = 0;
-    g_wan1_state = WAN1_DOWN;
 }
 
 void display_update() {
     if (!g_display_ok) return;
 
-    if (g_wan1_last_update_ms == 0) {
+    const WanMetrics& m = wan_metrics_get(1);
+
+    if (m.last_update_ms == 0) {
         // Never updated - show actual dashes (segment G = 0x40)
         display.writeDigitRaw(0, 0x40);
         display.writeDigitRaw(1, 0x40);
         display.writeDigitRaw(3, 0x40);  // position 2 is the colon
         display.writeDigitRaw(4, 0x40);
     } else {
-        unsigned long elapsed_secs = (millis() - g_wan1_last_update_ms) / 1000UL;
+        unsigned long elapsed_secs = (millis() - m.last_update_ms) / 1000UL;
         if (elapsed_secs > 9999) {
             elapsed_secs = 9999;  // cap at 4 digits
         }
