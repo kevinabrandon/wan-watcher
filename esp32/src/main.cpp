@@ -8,6 +8,7 @@
 #include "hostname.h"
 #include "leds.h"
 #include "http_routes.h"
+#include "wan_metrics.h"
 
 WebServer server(80);
 
@@ -83,6 +84,9 @@ void setup() {
     delay(1000);
     Serial.println();
     Serial.println("ESP32 LED webserver starting...");
+
+    // Initialize WAN metrics storage
+    wan_metrics_init();
 
     // Initialize I2C, MCP23017, and all LEDs
     leds_init();
