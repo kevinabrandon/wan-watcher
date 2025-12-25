@@ -2,7 +2,7 @@
 
 A physical WAN health indicator for pfSense using an ESP32.
 
-wan-watcher collects real-time WAN metrics from pfSense (latency, loss, jitter, and bandwidth usage) and exposes them to an ESP32, which drives LEDs and (eventually) a 7-segment display. The result is a small physical panel that shows your internet health at a glance.
+wan-watcher collects real-time WAN metrics from pfSense (latency, loss, jitter, and bandwidth usage) and exposes them to an ESP32, which drives LEDs and 7-segment displays. The result is a small physical panel that shows your internet health at a glance.
 
 ---
 
@@ -20,20 +20,26 @@ wan-watcher collects real-time WAN metrics from pfSense (latency, loss, jitter, 
 
 * **ESP32 indicator panel**
   * Receives metrics via JSON API (`POST /api/wan1`, `/api/wan2`)
-  * Web UI with auto-refresh, metrics table, and LED mapping
+  * Web UI with auto-refresh and metrics table
   * LED indicators for WAN state (UP / DEGRADED / DOWN) via MCP23017 I2C expander
   * Heartbeat LED showing how recent the last pfSense update was:
     * `< 45s`: OFF
     * `45–90s`: slow blink
     * `90–180s`: fast blink
     * `>= 3m`: solid ON + WAN forced DOWN
-  * 7-segment display showing seconds since last update
+  * Dual 7-segment displays per WAN:
+    * **Packet display**: Shows latency (L), jitter (J), or packet loss (P)
+    * **Bandwidth display**: Shows download (d) or upload (U) in Mbps
+  * Button controls for display cycling:
+    * Short press: advance to next metric
+    * Long press: toggle auto-cycle mode (5-second interval)
 
 ## Hardware
 
 * 1× Olimex ESP32-POE-ISO
 * 1× MCP23017 I2C GPIO expander (address 0x20)
-* 1× Adafruit 4-digit 7-segment display (HT16K33, address 0x71)
+* 2-4× Adafruit 4-digit 7-segment displays (HT16K33, addresses 0x71-0x74)
+* 2× Momentary push buttons (active low, directly to MCP23017 with internal pull-ups)
 * Panel-mount LEDs for WAN status indicators
 
 ### I2C Wiring (Stemma QT / Qwiic)
@@ -50,8 +56,19 @@ wan-watcher collects real-time WAN metrics from pfSense (latency, loss, jitter, 
 | MCP 0 | MCP23017 | WAN1 UP (green) |
 | MCP 1 | MCP23017 | WAN1 DEGRADED (yellow) |
 | MCP 2 | MCP23017 | WAN1 DOWN (red) |
+| MCP 13 | MCP23017 | Packet display button (INPUT_PULLUP) |
+| MCP 14 | MCP23017 | Bandwidth display button (INPUT_PULLUP) |
 | GPIO 4 | ESP32 | WiFi status LED |
 | GPIO 5 | ESP32 | Heartbeat LED |
+
+### Display I2C Addresses
+
+| Address | Display |
+|---------|---------|
+| 0x71 | WAN1 Packet (L/J/P) |
+| 0x72 | WAN1 Bandwidth (d/U) |
+| 0x73 | WAN2 Packet (L/J/P) |
+| 0x74 | WAN2 Bandwidth (d/U) |
 
 ## Repository Structure
 
@@ -172,10 +189,28 @@ curl -X POST -H "Content-Type: application/json" \
 * [x] MCP23017 GPIO expander for LED control
 * [x] Led abstraction class (supports GPIO and MCP pins)
 * [x] 7-segment display showing seconds since last update
-* [ ] Multi-WAN support
-* [ ] Display modes (latency / download / upload / loss)
-* [ ] Button input for cycling modes
-* [ ] Second 7-segment display for additional metrics
+* [x] Multi-WAN support (up to 2 WANs with 2 displays each)
+* [x] Display modes (latency / jitter / loss / download / upload)
+* [x] Button input for cycling modes (short press: advance, long press: toggle auto-cycle)
+* [x] Multiple 7-segment displays (packet + bandwidth per WAN)
+
+### ESP32 Local Pinger
+
+* [ ] ICMP ping to configurable target (default 8.8.8.8)
+* [ ] Calculate latency, jitter, loss percentage (dpinger-style)
+* [ ] Separate UP/DEGRADED/DOWN LEDs for local path
+* [ ] Separate 7-segment display for local packet stats (L/J/P)
+* [ ] Configurable thresholds for degraded/down states
+
+### Web UI Enhancements
+
+* [ ] Live-updating "time since last update" (no page reload)
+* [ ] Dynamic metrics refresh via JavaScript
+
+### Display Controls
+
+* [ ] Brightness control (potentiometer or buttons)
+* [ ] Display on/off toggle for "dark mode" (guest sleeping)
 
 ---
 
