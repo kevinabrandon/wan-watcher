@@ -14,9 +14,15 @@ static const uint8_t DISPLAY_ADDR = 0x71;
 // MCP23017 expander
 static Adafruit_MCP23X17 mcp;
 
-// 7-segment display
+// 7-segment display (legacy single display mode)
 static Adafruit_7segment display;
 static bool g_display_ok = false;
+
+// Display manager and button handlers
+DisplayManager display_manager;
+ButtonHandler button_handler_packet;
+ButtonHandler button_handler_bandwidth;
+static bool g_use_display_manager = false;
 
 // MCP-based LEDs (pins 0-2)
 Led led_wan1_up(0, LedPinType::MCP, &mcp);
@@ -34,6 +40,24 @@ static const unsigned long WAN1_TIMEOUT_MS = 3UL * 60UL * 1000UL; // 3 minutes
 // Heartbeat LED blink bookkeeping
 static unsigned long g_hb_last_toggle_ms = 0;
 static bool g_hb_led_on = false;
+
+// Button callback functions for packet display
+static void on_packet_short_press() {
+    display_manager.advancePacketMetric();
+}
+
+static void on_packet_long_press() {
+    display_manager.togglePacketAutoCycle();
+}
+
+// Button callback functions for bandwidth display
+static void on_bandwidth_short_press() {
+    display_manager.advanceBandwidthMetric();
+}
+
+static void on_bandwidth_long_press() {
+    display_manager.toggleBandwidthAutoCycle();
+}
 
 void wan1_set_leds(WanState state) {
     switch (state) {
@@ -156,9 +180,73 @@ void leds_init() {
     // Reset heartbeat state
     g_wan1_timed_out = false;
     g_hb_last_toggle_ms = 0;
+
+    // Not using display manager in legacy mode
+    g_use_display_manager = false;
+}
+
+void leds_init_with_displays(const DisplaySystemConfig& config) {
+    // Initialize I2C for MCP23017
+    Wire.begin(I2C_SDA, I2C_SCL);
+
+    if (!mcp.begin_I2C(MCP23017_ADDR, &Wire)) {
+        Serial.println("ERROR: MCP23017 not found!");
+    } else {
+        Serial.println("MCP23017 initialized");
+        // Immediately clear all 16 MCP pins
+        for (int i = 0; i < 16; i++) {
+            mcp.pinMode(i, OUTPUT);
+            mcp.digitalWrite(i, LOW);
+        }
+    }
+
+    // Initialize display manager (handles all 7-segment displays)
+    display_manager.begin(config, &mcp, &Wire);
+    g_use_display_manager = true;
+
+    // Initialize packet button handler if configured
+    if (config.button1_type != ButtonPinSource::NONE && config.button1_pin != 0) {
+        ButtonPinType btn_type = (config.button1_type == ButtonPinSource::MCP)
+                                 ? ButtonPinType::MCP : ButtonPinType::GPIO;
+        Adafruit_MCP23X17* btn_mcp = (config.button1_type == ButtonPinSource::MCP)
+                                     ? &mcp : nullptr;
+        button_handler_packet.begin(config.button1_pin, btn_type, btn_mcp);
+        button_handler_packet.onShortPress(on_packet_short_press);
+        button_handler_packet.onLongPress(on_packet_long_press);
+        button_handler_packet.setLongPressThreshold(config.long_press_ms);
+    }
+
+    // Initialize bandwidth button handler if configured
+    if (config.button2_type != ButtonPinSource::NONE && config.button2_pin != 0) {
+        ButtonPinType btn_type = (config.button2_type == ButtonPinSource::MCP)
+                                 ? ButtonPinType::MCP : ButtonPinType::GPIO;
+        Adafruit_MCP23X17* btn_mcp = (config.button2_type == ButtonPinSource::MCP)
+                                     ? &mcp : nullptr;
+        button_handler_bandwidth.begin(config.button2_pin, btn_type, btn_mcp);
+        button_handler_bandwidth.onShortPress(on_bandwidth_short_press);
+        button_handler_bandwidth.onLongPress(on_bandwidth_long_press);
+        button_handler_bandwidth.setLongPressThreshold(config.long_press_ms);
+    }
+
+    // Initialize GPIO-based LEDs
+    led_status1.begin();
+    led_heartbeat.begin();
+
+    // Reset heartbeat state
+    g_wan1_timed_out = false;
+    g_hb_last_toggle_ms = 0;
 }
 
 void display_update() {
+    // Use display manager if active
+    if (g_use_display_manager) {
+        button_handler_packet.update();
+        button_handler_bandwidth.update();
+        display_manager.update();
+        return;
+    }
+
+    // Legacy single display mode
     if (!g_display_ok) return;
 
     const WanMetrics& m = wan_metrics_get(1);

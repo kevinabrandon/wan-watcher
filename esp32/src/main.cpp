@@ -9,8 +9,35 @@
 #include "leds.h"
 #include "http_routes.h"
 #include "wan_metrics.h"
+#include "display_config.h"
 
 WebServer server(80);
+
+// Display system configuration
+static DisplaySystemConfig build_display_config() {
+    DisplaySystemConfig config;
+    config.mode = DisplayMode::PREFIX_LETTER;
+    config.cycle_interval_ms = 5000;       // 5 second cycle
+    config.auto_cycle_enabled = false;     // Start locked on L and d
+    config.base_address = 0x71;            // WAN1 packet=0x71, WAN1 bw=0x72, etc.
+
+    // Button configuration (two buttons for independent control)
+    // Button 1: controls packet display (L/J/P) - MCP pin 13
+    config.button1_type = ButtonPinSource::MCP;
+    config.button1_pin = 13;
+    // Button 2: controls bandwidth display (d/U) - MCP pin 14
+    config.button2_type = ButtonPinSource::MCP;
+    config.button2_pin = 14;
+    config.long_press_ms = 1000;
+
+    // Indicator LED pins (only used in INDICATOR_LED mode)
+    config.led_latency_pin = 8;
+    config.led_jitter_pin = 9;
+    config.led_loss_pin = 10;
+    config.led_download_pin = 11;
+    config.led_upload_pin = 12;
+    return config;
+}
 
 // start mDNS
 void startMDNS(const char* hostname) {
@@ -88,8 +115,9 @@ void setup() {
     // Initialize WAN metrics storage
     wan_metrics_init();
 
-    // Initialize I2C, MCP23017, and all LEDs
-    leds_init();
+    // Initialize I2C, MCP23017, displays, and LEDs
+    DisplaySystemConfig config = build_display_config();
+    leds_init_with_displays(config);
 
     // Block here until WiFi is actually up; led_status1 shows progress
     connectToWiFiBlocking();
