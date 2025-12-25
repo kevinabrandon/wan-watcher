@@ -135,42 +135,6 @@ static String root_page_html() {
     html += "</table>";
 
     html += R"(
-<hr>
-
-<h3>JSON API</h3>
-<p>POST metrics as JSON to update WAN state:</p>
-
-<pre><code>curl -X POST -H "Content-Type: application/json" \
-  -d '{"state":"up","loss_pct":0,"latency_ms":6,"jitter_ms":0,"down_mbps":2.0,"up_mbps":3.3}' \
-  http://)";
-    html += hostname;
-    html += R"(/api/wan1</code></pre>
-
-<p>Endpoints:</p>
-<ul>
-  <li><code>POST /api/wan1</code> - Update WAN1 metrics</li>
-  <li><code>POST /api/wan2</code> - Update WAN2 metrics</li>
-  <li><code>POST /api/wans</code> - Update all WANs (batch)</li>
-</ul>
-
-<hr>
-
-<h3>LED Mapping (MCP23017)</h3>
-<ul>
-  <li>MCP pin )";
-    html += String(g_led_wan1_up.pin());
-    html += R"( - WAN1 UP (green)</li>
-  <li>MCP pin )";
-    html += String(g_led_wan1_degraded.pin());
-    html += R"( - WAN1 DEGRADED (yellow)</li>
-  <li>MCP pin )";
-    html += String(g_led_wan1_down.pin());
-    html += R"( - WAN1 DOWN (red)</li>
-</ul>
-
-<hr>
-<p>Reload this page to see the current state reflected.</p>
-
 </body></html>
 )";
 
