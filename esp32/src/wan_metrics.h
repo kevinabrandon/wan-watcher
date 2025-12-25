@@ -19,7 +19,7 @@ struct WanMetrics {
 static const int MAX_WANS = 2;
 
 // Global metrics storage
-extern WanMetrics wan_metrics[MAX_WANS];
+extern WanMetrics g_wan_metrics[MAX_WANS];
 
 // Initialize metrics to defaults
 void wan_metrics_init();

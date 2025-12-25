@@ -9,11 +9,38 @@
 #include "leds.h"
 #include "http_routes.h"
 #include "wan_metrics.h"
+#include "display_config.h"
 
 WebServer server(80);
 
+// Display system configuration
+static DisplaySystemConfig build_display_config() {
+    DisplaySystemConfig config;
+    config.mode = DisplayMode::PREFIX_LETTER;
+    config.cycle_interval_ms = 5000;       // 5 second cycle
+    config.auto_cycle_enabled = false;     // Start locked on L and d
+    config.base_address = 0x71;            // WAN1 packet=0x71, WAN1 bw=0x72, etc.
+
+    // Button configuration (two buttons for independent control)
+    // Button 1: controls packet display (L/J/P) - MCP pin 13
+    config.button1_type = ButtonPinSource::MCP;
+    config.button1_pin = 13;
+    // Button 2: controls bandwidth display (d/U) - MCP pin 14
+    config.button2_type = ButtonPinSource::MCP;
+    config.button2_pin = 14;
+    config.long_press_ms = 1000;
+
+    // Indicator LED pins (only used in INDICATOR_LED mode)
+    config.led_latency_pin = 8;
+    config.led_jitter_pin = 9;
+    config.led_loss_pin = 10;
+    config.led_download_pin = 11;
+    config.led_upload_pin = 12;
+    return config;
+}
+
 // start mDNS
-void startMDNS(const char* hostname) {
+static void start_mdns(const char* hostname) {
     if (MDNS.begin(hostname)) {
         Serial.println("mDNS started");
 
@@ -26,8 +53,8 @@ void startMDNS(const char* hostname) {
 }
 
 // Blocking WiFi connect with infinite retry + status LED blink
-static void connectToWiFiBlocking() {
-    led_status1.set(false);  // start off
+static void connect_to_wifi_blocking() {
+    g_led_status1.set(false);  // start off
 
     String hostname = build_hostname();
     Serial.printf("Hostname: %s\n", hostname.c_str());
@@ -49,7 +76,7 @@ static void connectToWiFiBlocking() {
             attempts++;
 
             // Blink status LED while attempting
-            led_status1.set(!led_status1.state());
+            g_led_status1.set(!g_led_status1.state());
 
             Serial.print(".");
         }
@@ -62,16 +89,16 @@ static void connectToWiFiBlocking() {
             Serial.println(WiFi.localIP());
 
             // Connected: LED ON
-            led_status1.set(true);
+            g_led_status1.set(true);
             Serial.printf("Starting mDNS at %s.local\n", hostname.c_str());
-            startMDNS(hostname.c_str());
+            start_mdns(hostname.c_str());
             return;
         }
 
         // This attempt failed: indicate error (fast blink a few times)
         Serial.println("WiFi connect FAILED, retrying...");
         for (int i = 0; i < 6; ++i) {  // ~1.5s of fast blink
-            led_status1.set(!led_status1.state());
+            g_led_status1.set(!g_led_status1.state());
             delay(250);
         }
 
@@ -88,11 +115,12 @@ void setup() {
     // Initialize WAN metrics storage
     wan_metrics_init();
 
-    // Initialize I2C, MCP23017, and all LEDs
-    leds_init();
+    // Initialize I2C, MCP23017, displays, and LEDs
+    DisplaySystemConfig config = build_display_config();
+    leds_init_with_displays(config);
 
-    // Block here until WiFi is actually up; led_status1 shows progress
-    connectToWiFiBlocking();
+    // Block here until WiFi is actually up; g_led_status1 shows progress
+    connect_to_wifi_blocking();
 
     // Only now that WiFi is up, start HTTP server and routes
     setup_routes(server);
