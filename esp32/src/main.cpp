@@ -40,7 +40,7 @@ static DisplaySystemConfig build_display_config() {
 }
 
 // start mDNS
-void startMDNS(const char* hostname) {
+static void start_mdns(const char* hostname) {
     if (MDNS.begin(hostname)) {
         Serial.println("mDNS started");
 
@@ -53,8 +53,8 @@ void startMDNS(const char* hostname) {
 }
 
 // Blocking WiFi connect with infinite retry + status LED blink
-static void connectToWiFiBlocking() {
-    led_status1.set(false);  // start off
+static void connect_to_wifi_blocking() {
+    g_led_status1.set(false);  // start off
 
     String hostname = build_hostname();
     Serial.printf("Hostname: %s\n", hostname.c_str());
@@ -76,7 +76,7 @@ static void connectToWiFiBlocking() {
             attempts++;
 
             // Blink status LED while attempting
-            led_status1.set(!led_status1.state());
+            g_led_status1.set(!g_led_status1.state());
 
             Serial.print(".");
         }
@@ -89,16 +89,16 @@ static void connectToWiFiBlocking() {
             Serial.println(WiFi.localIP());
 
             // Connected: LED ON
-            led_status1.set(true);
+            g_led_status1.set(true);
             Serial.printf("Starting mDNS at %s.local\n", hostname.c_str());
-            startMDNS(hostname.c_str());
+            start_mdns(hostname.c_str());
             return;
         }
 
         // This attempt failed: indicate error (fast blink a few times)
         Serial.println("WiFi connect FAILED, retrying...");
         for (int i = 0; i < 6; ++i) {  // ~1.5s of fast blink
-            led_status1.set(!led_status1.state());
+            g_led_status1.set(!g_led_status1.state());
             delay(250);
         }
 
@@ -119,8 +119,8 @@ void setup() {
     DisplaySystemConfig config = build_display_config();
     leds_init_with_displays(config);
 
-    // Block here until WiFi is actually up; led_status1 shows progress
-    connectToWiFiBlocking();
+    // Block here until WiFi is actually up; g_led_status1 shows progress
+    connect_to_wifi_blocking();
 
     // Only now that WiFi is up, start HTTP server and routes
     setup_routes(server);

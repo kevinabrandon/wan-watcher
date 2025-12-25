@@ -9,16 +9,16 @@
 #include "button_handler.h"
 
 // LED objects (defined in leds.cpp)
-extern Led led_wan1_up;
-extern Led led_wan1_degraded;
-extern Led led_wan1_down;
-extern Led led_heartbeat;
-extern Led led_status1;
+extern Led g_led_wan1_up;
+extern Led g_led_wan1_degraded;
+extern Led g_led_wan1_down;
+extern Led g_led_heartbeat;
+extern Led g_led_status1;
 
 // Display manager and button handlers (defined in leds.cpp)
-extern DisplayManager display_manager;
-extern ButtonHandler button_handler_packet;   // Controls packet display (L/J/P)
-extern ButtonHandler button_handler_bandwidth; // Controls bandwidth display (d/U)
+extern DisplayManager g_display_manager;
+extern ButtonHandler g_button_handler_packet;   // Controls packet display (L/J/P)
+extern ButtonHandler g_button_handler_bandwidth; // Controls bandwidth display (d/U)
 
 // Legacy init (single display showing seconds since update)
 void leds_init();

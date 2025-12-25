@@ -158,13 +158,13 @@ static String root_page_html() {
 <h3>LED Mapping (MCP23017)</h3>
 <ul>
   <li>MCP pin )";
-    html += String(led_wan1_up.pin());
+    html += String(g_led_wan1_up.pin());
     html += R"( - WAN1 UP (green)</li>
   <li>MCP pin )";
-    html += String(led_wan1_degraded.pin());
+    html += String(g_led_wan1_degraded.pin());
     html += R"( - WAN1 DEGRADED (yellow)</li>
   <li>MCP pin )";
-    html += String(led_wan1_down.pin());
+    html += String(g_led_wan1_down.pin());
     html += R"( - WAN1 DOWN (red)</li>
 </ul>
 
@@ -292,6 +292,9 @@ static void handle_wans_post(WebServer& server) {
         wan["state"] = wan_state_to_string(m.state);
         wan["loss_pct"] = m.loss_pct;
         wan["latency_ms"] = m.latency_ms;
+        wan["jitter_ms"] = m.jitter_ms;
+        wan["down_mbps"] = m.down_mbps;
+        wan["up_mbps"] = m.up_mbps;
     }
 
     String output;

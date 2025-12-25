@@ -84,7 +84,7 @@ void ButtonHandler::update() {
     }
     _last_raw_state = raw;
 
-    if ((now - _last_debounce_ms) > DEBOUNCE_MS) {
+    if ((now - _last_debounce_ms) >= DEBOUNCE_MS) {
         // State is stable
         if (raw != _stable_state) {
             _stable_state = raw;

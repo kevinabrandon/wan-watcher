@@ -49,7 +49,7 @@ struct DisplaySystemConfig {
     DisplayMode mode = DisplayMode::PREFIX_LETTER;
 
     // Cycle timing
-    unsigned long cycle_interval_ms = 3000;  // 3 seconds
+    unsigned long cycle_interval_ms = 5000;  // 5 seconds
     bool auto_cycle_enabled = true;
 
     // I2C base address for displays
