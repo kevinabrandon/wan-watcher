@@ -10,7 +10,7 @@
 #
 
 INTERVAL="${1:-15}"
-ESP32_HOST="192.168.1.216"
+ESP32_HOST="192.168.1.63"
 STATE_DIR="/var/run"
 
 ###############################################################################
@@ -19,12 +19,15 @@ STATE_DIR="/var/run"
 
 normalize_state() {
     LOSS="$1"
+    LATENCY="$2"
 
     if [ -z "$LOSS" ]; then
         echo "unknown"
-    elif [ "$LOSS" -eq 100 ] 2>/dev/null; then
+    elif [ "$LOSS" -gt 50 ] 2>/dev/null; then
         echo "down"
     elif [ "$LOSS" -gt 5 ] 2>/dev/null; then
+        echo "degraded"
+    elif [ -n "$LATENCY" ] && [ "$LATENCY" -gt 200 ] 2>/dev/null; then
         echo "degraded"
     else
         echo "up"
@@ -78,7 +81,7 @@ poll_and_post_wan() {
             STD_MS=$((STD_US / 1000))
         fi
 
-        STATE=$(normalize_state "$LOSS")
+        STATE=$(normalize_state "$LOSS" "$LAT_MS")
     fi
 
     # Calculate bandwidth from interface counters

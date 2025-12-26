@@ -40,8 +40,18 @@ enum class ButtonPinSource {
 static const uint8_t PACKET_METRIC_COUNT = 3;
 static const uint8_t BANDWIDTH_METRIC_COUNT = 2;
 
-// Maximum displays supported (2 WANs x 2 displays each)
-static const uint8_t MAX_DISPLAYS = 4;
+// Maximum displays supported (2 WANs x 2 displays each + 1 local pinger)
+static const uint8_t MAX_DISPLAYS = 5;
+
+// Local pinger display I2C address
+static const uint8_t LOCAL_PINGER_DISPLAY_ADDR = 0x75;
+
+// Metrics data source (which device provides the data)
+enum class MetricsSource : uint8_t {
+    WAN1 = 1,
+    WAN2 = 2,
+    LOCAL_PINGER = 0  // Uses local_pinger_get() instead of wan_metrics_get()
+};
 
 // Configuration structure
 struct DisplaySystemConfig {

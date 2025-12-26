@@ -12,6 +12,9 @@
 extern Led g_led_wan1_up;
 extern Led g_led_wan1_degraded;
 extern Led g_led_wan1_down;
+extern Led g_led_local_up;
+extern Led g_led_local_degraded;
+extern Led g_led_local_down;
 extern Led g_led_heartbeat;
 extern Led g_led_status1;
 
@@ -28,6 +31,9 @@ void leds_init_with_displays(const DisplaySystemConfig& config);
 
 // Update WAN1 LEDs based on state
 void wan1_set_leds(WanState state);
+
+// Update local pinger LEDs based on state
+void local_pinger_set_leds(WanState state);
 
 // Heartbeat check - call regularly from loop()
 // Uses wan_metrics[0].last_update_ms for timing

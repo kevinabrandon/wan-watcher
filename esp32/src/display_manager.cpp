@@ -1,6 +1,7 @@
 // display_manager.cpp
 #include "display_manager.h"
 #include "wan_metrics.h"
+#include "local_pinger.h"
 
 DisplayManager::DisplayManager()
     : _active_count(0)
@@ -55,6 +56,19 @@ void DisplayManager::begin(const DisplaySystemConfig& config,
                               addr);
             }
         }
+    }
+
+    // Initialize local pinger display at index 4 (0x75)
+    // wan_id=0 signals to use local_pinger_get() instead of wan_metrics_get()
+    const int LOCAL_PINGER_IDX = 4;
+    if (_displays[LOCAL_PINGER_IDX].begin(LOCAL_PINGER_DISPLAY_ADDR, wire)) {
+        _displays[LOCAL_PINGER_IDX].configure(DisplayType::PACKET, 0);  // wan_id=0 for local pinger
+        _active_count++;
+        Serial.printf("Display %d (Local Pinger) at 0x%02X: OK\n",
+                      LOCAL_PINGER_IDX, LOCAL_PINGER_DISPLAY_ADDR);
+    } else {
+        Serial.printf("Display %d (Local Pinger) at 0x%02X: not found\n",
+                      LOCAL_PINGER_IDX, LOCAL_PINGER_DISPLAY_ADDR);
     }
 
     // Initialize indicator LEDs only if INDICATOR_LED mode
