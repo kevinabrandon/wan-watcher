@@ -6,7 +6,7 @@ wan-watcher collects real-time WAN metrics from pfSense (latency, loss, jitter, 
 
 ---
 
-## Features (current & planned)
+## Features
 
 * **pfSense metrics collector**
 
@@ -35,11 +35,20 @@ wan-watcher collects real-time WAN metrics from pfSense (latency, loss, jitter, 
     * Long press: toggle auto-cycle mode (5-second interval)
 
 * **ESP32 local pinger**
+
+The local pinger represents the controller’s independent view of internet reachability
+and may disagree with pfSense during routing or firewall faults.
+
   * ICMP pingger to configurable target (default 8.8.8.8)
   * Calculates latency, jitter, loss percentage (dpinger-style)
     * Averaged over a 60 second window with 120 samples (every 500ms)
   * Separate UP/DEGRADED/DOWN LEDs for local path
   * Separate 7-segment display for local packet stats (L/J/P)
+
+## Failure Behavior
+
+- If pfSense stops reporting: WAN forced DOWN after 3 minutes and 7-Segment displays read "----"
+- If ESP32 loses Wi-Fi: status LED blinks, last state retained
 
 ## Hardware
 
@@ -63,9 +72,9 @@ wan-watcher collects real-time WAN metrics from pfSense (latency, loss, jitter, 
 | MCP 0 | MCP23017 | WAN1 UP (green) |
 | MCP 1 | MCP23017 | WAN1 DEGRADED (yellow) |
 | MCP 2 | MCP23017 | WAN1 DOWN (red) |
-| MCP 5 | MCP23017 | WAN1 UP (green) |
-| MCP 6 | MCP23017 | WAN1 DEGRADED (yellow) |
-| MCP 7 | MCP23017 | WAN1 DOWN (red) |
+| MCP 5 | MCP23017 | Local UP (green) |
+| MCP 6 | MCP23017 | Local DEGRADED (yellow) |
+| MCP 7 | MCP23017 | Local DOWN (red) |
 | MCP 8 | MCP23017 | WAN2 UP (green) |
 | MCP 9 | MCP23017 | WAN2 DEGRADED (yellow) |
 | MCP 10 | MCP23017 | WAN2 DOWN (red) |
@@ -178,50 +187,59 @@ curl -X POST -H "Content-Type: application/json" \
   http://wan-watcher-xxxxxx.local/api/wan1
 ```
 
+## Security Notes
+
+- Intended for a trusted VLAN
+- No authentication by default
+- Do not expose the ESP32 API to untrusted networks
+
 ---
 
 ## Roadmap
 
-### pfSense Side
+### Implemented
 
-* [x] Poll dpinger for latency/jitter/loss
-* [x] Auto-detect WAN interfaces
-* [x] Calculate per-WAN bandwidth usage
-* [x] Implement HTTP client to POST metrics to ESP32 (JSON API)
-* [x] Multi-WAN POST support
+#### pfSense Side
 
-### ESP32 Side
+ - Poll dpinger for latency/jitter/loss
+ - Auto-detect WAN interfaces
+ - Calculate per-WAN bandwidth usage
+ - Implement HTTP client to POST metrics to ESP32 (JSON API)
+ - Multi-WAN POST support
 
-* [x] Basic PlatformIO firmware project scaffolding
-* [x] Wi-Fi connect loop with status LED
-* [x] Dynamic hostname + mDNS support
-* [x] HTTP server + routes
-* [x] WAN1 LED state machine (UP / DEGRADED / DOWN)
-* [x] Heartbeat LED (off / slow blink / fast blink / solid)
-* [x] Auto-timeout WAN1 to DOWN if no update for 3 minutes
-* [x] Web UI with color indicators and curl examples
-* [x] MCP23017 GPIO expander for LED control
-* [x] Led abstraction class (supports GPIO and MCP pins)
-* [x] 7-segment display showing seconds since last update
-* [x] Multi-WAN support (up to 2 WANs with 2 displays each)
-* [x] Display modes (latency / jitter / loss / download / upload)
-* [x] Button input for cycling modes (short press: advance, long press: toggle auto-cycle)
-* [x] Multiple 7-segment displays (packet + bandwidth per WAN)
+#### ESP32 Side
 
-### ESP32 Local Pinger
+ - Wi-Fi + Ethernet support with status LED
+ - Dynamic hostname + mDNS support
+ - HTTP server + routes
+ - WAN1 LED state machine (UP / DEGRADED / DOWN)
+ - Heartbeat LED (off / slow blink / fast blink / solid)
+ - Auto-timeout WAN1 to DOWN if no update for 3 minutes
+ - Web UI with color indicators
+ - MCP23017 GPIO expander for LED control
+ - Led abstraction class (supports GPIO and MCP23017 pins)
+ - 7-segment display showing seconds since last update
+ - Multi-WAN support (up to 2 WANs with 2 displays each)
+ - Display modes (latency / jitter / loss / download / upload)
+ - Button input for cycling modes (short press: advance, long press: toggle auto-cycle)
+ - Multiple 7-segment displays (packet + bandwidth per WAN)
 
-* [x] ICMP ping to configurable target (default 8.8.8.8)
-* [x] Calculate latency, jitter, loss percentage (dpinger-style)
-* [x] Separate UP/DEGRADED/DOWN LEDs for local path
-* [x] Separate 7-segment display for local packet stats (L/J/P)
-* [x] Configurable thresholds for degraded/down states
+#### ESP32 Local Pinger
 
-### Web UI Enhancements
+ - ICMP ping to configurable target (default 8.8.8.8)
+ - Calculate latency, jitter, loss percentage (dpinger-style)
+ - Separate UP/DEGRADED/DOWN LEDs for local path
+ - Separate 7-segment display for local packet stats (L/J/P)
+ - Configurable thresholds for degraded/down states
+
+### Planned
+
+#### Web UI Enhancements
 
 * [ ] Live-updating "time since last update" (no page reload)
 * [ ] Dynamic metrics refresh via JavaScript
 
-### Display Controls
+#### Display Controls
 
 * [ ] Brightness control (potentiometer or buttons)
 * [ ] Display on/off toggle for "dark mode" (guest sleeping)
