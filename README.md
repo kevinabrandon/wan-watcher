@@ -34,11 +34,18 @@ wan-watcher collects real-time WAN metrics from pfSense (latency, loss, jitter, 
     * Short press: advance to next metric
     * Long press: toggle auto-cycle mode (5-second interval)
 
+* **ESP32 local pinger**
+  * ICMP pingger to configurable target (default 8.8.8.8)
+  * Calculates latency, jitter, loss percentage (dpinger-style)
+    * Averaged over a 60 second window with 120 samples (every 500ms)
+  * Separate UP/DEGRADED/DOWN LEDs for local path
+  * Separate 7-segment display for local packet stats (L/J/P)
+
 ## Hardware
 
 * 1× Olimex ESP32-POE-ISO
 * 1× MCP23017 I2C GPIO expander (address 0x20)
-* 2-4× Adafruit 4-digit 7-segment displays (HT16K33, addresses 0x71-0x74)
+* 5× Adafruit 4-digit 7-segment displays (HT16K33, addresses 0x71-0x75)
 * 2× Momentary push buttons (active low, directly to MCP23017 with internal pull-ups)
 * Panel-mount LEDs for WAN status indicators
 
@@ -56,6 +63,12 @@ wan-watcher collects real-time WAN metrics from pfSense (latency, loss, jitter, 
 | MCP 0 | MCP23017 | WAN1 UP (green) |
 | MCP 1 | MCP23017 | WAN1 DEGRADED (yellow) |
 | MCP 2 | MCP23017 | WAN1 DOWN (red) |
+| MCP 5 | MCP23017 | WAN1 UP (green) |
+| MCP 6 | MCP23017 | WAN1 DEGRADED (yellow) |
+| MCP 7 | MCP23017 | WAN1 DOWN (red) |
+| MCP 8 | MCP23017 | WAN2 UP (green) |
+| MCP 9 | MCP23017 | WAN2 DEGRADED (yellow) |
+| MCP 10 | MCP23017 | WAN2 DOWN (red) |
 | MCP 13 | MCP23017 | Packet display button (INPUT_PULLUP) |
 | MCP 14 | MCP23017 | Bandwidth display button (INPUT_PULLUP) |
 | GPIO 4 | ESP32 | WiFi status LED |
@@ -69,6 +82,7 @@ wan-watcher collects real-time WAN metrics from pfSense (latency, loss, jitter, 
 | 0x72 | WAN1 Bandwidth (d/U) |
 | 0x73 | WAN2 Packet (L/J/P) |
 | 0x74 | WAN2 Bandwidth (d/U) |
+| 0x75 | Local Packet (L/J/P) |
 
 ## Repository Structure
 
@@ -196,11 +210,11 @@ curl -X POST -H "Content-Type: application/json" \
 
 ### ESP32 Local Pinger
 
-* [ ] ICMP ping to configurable target (default 8.8.8.8)
-* [ ] Calculate latency, jitter, loss percentage (dpinger-style)
-* [ ] Separate UP/DEGRADED/DOWN LEDs for local path
-* [ ] Separate 7-segment display for local packet stats (L/J/P)
-* [ ] Configurable thresholds for degraded/down states
+* [x] ICMP ping to configurable target (default 8.8.8.8)
+* [x] Calculate latency, jitter, loss percentage (dpinger-style)
+* [x] Separate UP/DEGRADED/DOWN LEDs for local path
+* [x] Separate 7-segment display for local packet stats (L/J/P)
+* [x] Configurable thresholds for degraded/down states
 
 ### Web UI Enhancements
 
