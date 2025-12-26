@@ -37,7 +37,7 @@ wan-watcher collects real-time WAN metrics from pfSense (latency, loss, jitter, 
 * **ESP32 local pinger**
 
   * _Represents the controller’s independent view of internet reachability and may disagree with pfSense during routing or firewall faults._
-  * ICMP pingger to configurable target (default 8.8.8.8)
+  * ICMP pinger to configurable target (default 8.8.8.8)
   * Calculates latency, jitter, loss percentage (dpinger-style)
     * Averaged over a 60 second window with 120 samples (every 500ms)
   * Separate UP/DEGRADED/DOWN LEDs for local path
@@ -45,7 +45,7 @@ wan-watcher collects real-time WAN metrics from pfSense (latency, loss, jitter, 
 
 ## Failure Behavior
 
-- If pfSense stops reporting: WAN forced DOWN after 3 minutes and 7-Segment displays read "----" (local pinger continues updating independently)
+- If pfSense stops reporting: WAN forced DOWN after 3 minutes; 7-segment displays read "----" (local pinger continues updating independently)
 - If ESP32 loses Wi-Fi: status LED blinks, last state retained
 
 ## Hardware
