@@ -6,6 +6,14 @@
 #include "http_routes.h"
 #include "leds.h"
 #include "wan_metrics.h"
+#include "local_pinger.h"
+
+// ---- Favicon SVG ----
+static const char* FAVICON_SVG = R"(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <circle cx="16" cy="16" r="14" fill="#2ecc71"/>
+  <text x="16" y="16" text-anchor="middle" font-size="12" font-weight="700" fill="#ffffff" font-family="system-ui, sans-serif">W</text>
+  <text x="16" y="24" text-anchor="middle" font-size="12" font-weight="700" fill="#ffffff" font-family="system-ui, sans-serif">W</text>
+</svg>)";
 
 // ---- Helper: WAN status line with colored circles ----
 static String wan_state_line_html(int wan_id) {
@@ -73,7 +81,79 @@ static String wan_metrics_row_html(int wan_id) {
     html += "<td>" + String(m.jitter_ms) + " ms</td>";
     html += "<td>" + String(m.down_mbps, 1) + " Mbps</td>";
     html += "<td>" + String(m.up_mbps, 1) + " Mbps</td>";
+    html += "<td>-</td>";  // No sample tracking for WAN metrics
     html += "<td>" + last_update_human(wan_id) + "</td>";
+    html += "</tr>";
+
+    return html;
+}
+
+// ---- Helper: Local pinger status line with colored circles ----
+static String local_pinger_state_line_html() {
+    const LocalPingerMetrics& m = local_pinger_get();
+
+    switch (m.state) {
+        case WanState::UP:
+            return "&#x1F7E2; <strong>Local: UP</strong> &#x1F7E2;";
+        case WanState::DEGRADED:
+            return "&#x1F7E1; <strong>Local: DEGRADED</strong> &#x1F7E1;";
+        case WanState::DOWN:
+        default:
+            return "&#x1F534; <strong>Local: DOWN</strong> &#x1F534;";
+    }
+}
+
+// ---- Helper: Local pinger last updated string ----
+static String local_pinger_last_update_human() {
+    const LocalPingerMetrics& m = local_pinger_get();
+
+    if (m.last_update_ms == 0) {
+        return "never";
+    }
+
+    unsigned long now = millis();
+    unsigned long elapsed = now - m.last_update_ms;
+    unsigned long secs = elapsed / 1000UL;
+
+    if (secs < 60) {
+        return String(secs) + "s ago";
+    }
+
+    unsigned long mins = secs / 60;
+    if (mins < 60) {
+        unsigned long rem_s = secs % 60;
+        String s = String(mins) + "m";
+        if (rem_s > 0) {
+            s += " " + String(rem_s) + "s";
+        }
+        s += " ago";
+        return s;
+    }
+
+    unsigned long hours = mins / 60;
+    unsigned long rem_m = mins % 60;
+    String s = String(hours) + "h";
+    if (rem_m > 0) {
+        s += " " + String(rem_m) + "m";
+    }
+    s += " ago";
+    return s;
+}
+
+// ---- Helper: Local pinger metrics table row ----
+static String local_pinger_metrics_row_html() {
+    const LocalPingerMetrics& m = local_pinger_get();
+
+    String html = "<tr>";
+    html += "<td>Local (" + String(local_pinger_get_target()) + ")</td>";
+    html += "<td>" + String(wan_state_to_string(m.state)) + "</td>";
+    html += "<td>" + String(m.loss_pct) + "%</td>";
+    html += "<td>" + String(m.latency_ms) + " ms</td>";
+    html += "<td>" + String(m.jitter_ms) + " ms</td>";
+    html += "<td>-</td>";  // No download for local pinger
+    html += "<td>-</td>";  // No upload for local pinger
+    html += "<td>" + String(m.sample_count) + " / " + String(m.window_secs) + "s</td>";
+    html += "<td>" + local_pinger_last_update_human() + "</td>";
     html += "</tr>";
 
     return html;
@@ -91,6 +171,7 @@ static String root_page_html() {
   <meta charset="utf-8">
   <meta http-equiv="refresh" content="10">
   <title>wan-watcher</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <style>
     body {
       font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -110,6 +191,8 @@ static String root_page_html() {
 
     html += "<h2 class=\"status\">";
     html += wan_state_line_html(1);
+    html += "<br>";
+    html += local_pinger_state_line_html();
     html += "</h2>";
 
     html += "<p><strong>Hostname:</strong> <code>" + hostname + "</code><br>";
@@ -127,11 +210,13 @@ static String root_page_html() {
     <th>Jitter</th>
     <th>Download</th>
     <th>Upload</th>
+    <th>Samples</th>
     <th>Last Update</th>
   </tr>
 )";
     html += wan_metrics_row_html(1);
     html += wan_metrics_row_html(2);
+    html += local_pinger_metrics_row_html();
     html += "</table>";
 
     html += R"(
@@ -286,9 +371,12 @@ void setup_routes(WebServer& server) {
         handle_wans_post(server);
     });
 
-    // Favicon: silence noise
+    // Favicon
+    server.on("/favicon.svg", [&server]() {
+        server.send(200, "image/svg+xml", FAVICON_SVG);
+    });
     server.on("/favicon.ico", [&server]() {
-        server.send(204);
+        server.send(204);  // Some browsers still request .ico
     });
 
     server.onNotFound([&server]() {

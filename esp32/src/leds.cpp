@@ -24,10 +24,15 @@ ButtonHandler g_button_handler_packet;
 ButtonHandler g_button_handler_bandwidth;
 static bool g_use_display_manager = false;
 
-// MCP-based LEDs (pins 0-2)
+// MCP-based LEDs - WAN1 (pins 0-2)
 Led g_led_wan1_up(0, LedPinType::MCP, &g_mcp);
 Led g_led_wan1_degraded(1, LedPinType::MCP, &g_mcp);
 Led g_led_wan1_down(2, LedPinType::MCP, &g_mcp);
+
+// MCP-based LEDs - Local pinger (pins 5-7)
+Led g_led_local_up(5, LedPinType::MCP, &g_mcp);
+Led g_led_local_degraded(6, LedPinType::MCP, &g_mcp);
+Led g_led_local_down(7, LedPinType::MCP, &g_mcp);
 
 // GPIO-based LEDs
 Led g_led_status1(4, LedPinType::GPIO);
@@ -81,6 +86,29 @@ void wan1_set_leds(WanState state) {
             g_led_wan1_degraded.set(false);
             g_led_wan1_down.set(true);
             Serial.println("WAN1 LEDs -> DOWN");
+            break;
+    }
+}
+
+void local_pinger_set_leds(WanState state) {
+    switch (state) {
+        case WanState::UP:
+            g_led_local_up.set(true);
+            g_led_local_degraded.set(false);
+            g_led_local_down.set(false);
+            break;
+
+        case WanState::DEGRADED:
+            g_led_local_up.set(false);
+            g_led_local_degraded.set(true);
+            g_led_local_down.set(false);
+            break;
+
+        case WanState::DOWN:
+        default:
+            g_led_local_up.set(false);
+            g_led_local_degraded.set(false);
+            g_led_local_down.set(true);
             break;
     }
 }
@@ -177,6 +205,9 @@ void leds_init() {
     g_led_wan1_up.begin();
     g_led_wan1_degraded.begin();
     g_led_wan1_down.begin();
+    g_led_local_up.begin();
+    g_led_local_degraded.begin();
+    g_led_local_down.begin();
     g_led_status1.begin();
     g_led_heartbeat.begin();
 
@@ -235,6 +266,9 @@ void leds_init_with_displays(const DisplaySystemConfig& config) {
     g_led_wan1_up.begin();
     g_led_wan1_degraded.begin();
     g_led_wan1_down.begin();
+    g_led_local_up.begin();
+    g_led_local_degraded.begin();
+    g_led_local_down.begin();
     g_led_status1.begin();
     g_led_heartbeat.begin();
 

@@ -1,6 +1,8 @@
 // main.cpp
 #include <Arduino.h>
 #include <WiFi.h>
+#include <esp_wifi.h>
+#include <ETH.h>
 #include <WebServer.h>
 #include <ESPmDNS.h>
 
@@ -10,8 +12,21 @@
 #include "http_routes.h"
 #include "wan_metrics.h"
 #include "display_config.h"
+#include "local_pinger.h"
 
 WebServer server(80);
+
+// Ethernet configuration for Olimex ESP32-POE-ISO
+#define ETH_CLK_MODE    ETH_CLOCK_GPIO17_OUT
+#define ETH_POWER_PIN   12
+#define ETH_TYPE        ETH_PHY_LAN8720
+#define ETH_ADDR        0
+#define ETH_MDC_PIN     23
+#define ETH_MDIO_PIN    18
+
+// Connection state
+static bool g_eth_connected = false;
+static bool g_wifi_connected = false;
 
 // Display system configuration
 static DisplaySystemConfig build_display_config() {
@@ -52,57 +67,115 @@ static void start_mdns(const char* hostname) {
     }
 }
 
-// Blocking WiFi connect with infinite retry + status LED blink
-static void connect_to_wifi_blocking() {
-    g_led_status1.set(false);  // start off
+// Ethernet event handler
+static void eth_event(WiFiEvent_t event) {
+    switch (event) {
+        case ARDUINO_EVENT_ETH_START:
+            Serial.println("ETH Started");
+            ETH.setHostname(build_hostname().c_str());
+            break;
+        case ARDUINO_EVENT_ETH_CONNECTED:
+            Serial.println("ETH Connected");
+            break;
+        case ARDUINO_EVENT_ETH_GOT_IP:
+            Serial.print("ETH IP: ");
+            Serial.println(ETH.localIP());
+            Serial.printf("ETH Speed: %dMbps, %s\n",
+                ETH.linkSpeed(),
+                ETH.fullDuplex() ? "Full Duplex" : "Half Duplex");
+            g_eth_connected = true;
+            break;
+        case ARDUINO_EVENT_ETH_DISCONNECTED:
+            Serial.println("ETH Disconnected");
+            g_eth_connected = false;
+            break;
+        case ARDUINO_EVENT_ETH_STOP:
+            Serial.println("ETH Stopped");
+            g_eth_connected = false;
+            break;
+        default:
+            break;
+    }
+}
 
+// Try to connect via Ethernet, returns true if successful
+static bool try_ethernet(int timeout_ms) {
+    Serial.println("Trying Ethernet connection...");
+
+    WiFi.onEvent(eth_event);
+    ETH.begin(ETH_ADDR, ETH_POWER_PIN, ETH_MDC_PIN, ETH_MDIO_PIN, ETH_TYPE, ETH_CLK_MODE);
+
+    unsigned long start = millis();
+    while (!g_eth_connected && (millis() - start < (unsigned long)timeout_ms)) {
+        delay(100);
+        g_led_status1.set(!g_led_status1.state());
+    }
+
+    return g_eth_connected;
+}
+
+// Try to connect via WiFi, returns true if successful
+static bool try_wifi(int timeout_ms) {
     String hostname = build_hostname();
-    Serial.printf("Hostname: %s\n", hostname.c_str());
-    Serial.printf("Target SSID: %s\n", WIFI_SSID);
+    Serial.printf("Trying WiFi connection to %s...\n", WIFI_SSID);
 
     WiFi.mode(WIFI_STA);
     WiFi.setHostname(hostname.c_str());
+    WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
 
-    for (;;) {  // forever loop until connected
-        Serial.println("Starting WiFi connection attempt...");
-        WiFi.disconnect(true);
-        WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+    unsigned long start = millis();
+    while (WiFi.status() != WL_CONNECTED && (millis() - start < (unsigned long)timeout_ms)) {
+        delay(100);
+        g_led_status1.set(!g_led_status1.state());
+    }
 
-        int attempts = 0;
+    if (WiFi.status() == WL_CONNECTED) {
+        g_wifi_connected = true;
+        // Disable WiFi power saving for lower latency
+        esp_wifi_set_ps(WIFI_PS_NONE);
+        return true;
+    }
 
-        // Try for ~30s (60 * 500ms) on this attempt
-        while (WiFi.status() != WL_CONNECTED && attempts < 60) {
-            delay(500);
-            attempts++;
+    return false;
+}
 
-            // Blink status LED while attempting
-            g_led_status1.set(!g_led_status1.state());
+// Connect to network: try Ethernet first, fall back to WiFi
+static void connect_to_network_blocking() {
+    g_led_status1.set(false);
 
-            Serial.print(".");
-        }
+    String hostname = build_hostname();
+    Serial.printf("Hostname: %s\n", hostname.c_str());
 
-        Serial.println();
+    // Try Ethernet first (5 second timeout)
+    if (try_ethernet(5000)) {
+        Serial.println("Connected via Ethernet");
+        g_led_status1.set(true);
+        start_mdns(hostname.c_str());
+        return;
+    }
 
-        if (WiFi.status() == WL_CONNECTED) {
+    Serial.println("Ethernet not connected, trying WiFi...");
+
+    // Fall back to WiFi with retry loop
+    for (;;) {
+        if (try_wifi(30000)) {
             Serial.println("WiFi connected");
             Serial.print("IP address: ");
             Serial.println(WiFi.localIP());
-
-            // Connected: LED ON
+            Serial.printf("RSSI: %d dBm\n", WiFi.RSSI());
             g_led_status1.set(true);
-            Serial.printf("Starting mDNS at %s.local\n", hostname.c_str());
             start_mdns(hostname.c_str());
             return;
         }
 
-        // This attempt failed: indicate error (fast blink a few times)
         Serial.println("WiFi connect FAILED, retrying...");
-        for (int i = 0; i < 6; ++i) {  // ~1.5s of fast blink
+        WiFi.disconnect(true);
+
+        // Fast blink to indicate error
+        for (int i = 0; i < 6; ++i) {
             g_led_status1.set(!g_led_status1.state());
             delay(250);
         }
-
-        // Loop back and try again
     }
 }
 
@@ -119,17 +192,26 @@ void setup() {
     DisplaySystemConfig config = build_display_config();
     leds_init_with_displays(config);
 
-    // Block here until WiFi is actually up; g_led_status1 shows progress
-    connect_to_wifi_blocking();
+    // Block here until network is up; g_led_status1 shows progress
+    // Tries Ethernet first, falls back to WiFi
+    connect_to_network_blocking();
 
     // Only now that WiFi is up, start HTTP server and routes
     setup_routes(server);
     server.begin();
     Serial.println("HTTP server started");
+
+    // Initialize local pinger (needs WiFi to be up)
+    local_pinger_init();
 }
 
 void loop() {
     server.handleClient();
     wan1_heartbeat_check();
     display_update();
+
+    // Update local pinger and its LEDs
+    local_pinger_update();
+    const LocalPingerMetrics& lp = local_pinger_get();
+    local_pinger_set_leds(lp.state);
 }

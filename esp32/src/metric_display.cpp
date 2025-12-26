@@ -1,6 +1,7 @@
 // metric_display.cpp
 #include "metric_display.h"
 #include "wan_metrics.h"
+#include "local_pinger.h"
 
 // 7-segment patterns for letters (active-low segments: 0bPGFEDCBA)
 // Segment layout:
@@ -127,17 +128,25 @@ static const unsigned long STALE_DATA_TIMEOUT_MS = 3UL * 60UL * 1000UL;
 void MetricDisplay::render(DisplayMode mode) {
     if (!_ready) return;
 
-    const WanMetrics& m = wan_metrics_get(_wan_id);
+    // Get last update timestamp based on data source
+    unsigned long last_update_ms;
+    if (_wan_id == 0) {
+        // Local pinger
+        last_update_ms = local_pinger_get().last_update_ms;
+    } else {
+        // WAN metrics
+        last_update_ms = wan_metrics_get(_wan_id).last_update_ms;
+    }
 
     // Show dashes if never updated
-    if (m.last_update_ms == 0) {
+    if (last_update_ms == 0) {
         showDashes();
         _display.writeDisplay();
         return;
     }
 
     // Show dashes if data is stale (no update for 3 minutes)
-    unsigned long elapsed = millis() - m.last_update_ms;
+    unsigned long elapsed = millis() - last_update_ms;
     if (elapsed > STALE_DATA_TIMEOUT_MS) {
         showDashes();
         _display.writeDisplay();
@@ -156,24 +165,43 @@ void MetricDisplay::render(DisplayMode mode) {
 }
 
 void MetricDisplay::renderPacketValue(DisplayMode mode) {
-    const WanMetrics& m = wan_metrics_get(_wan_id);
-
     int value = 0;
     char letter = 'L';
 
-    switch (_packet_metric) {
-        case PacketMetric::LATENCY:
-            value = m.latency_ms;
-            letter = 'L';
-            break;
-        case PacketMetric::JITTER:
-            value = m.jitter_ms;
-            letter = 'J';
-            break;
-        case PacketMetric::LOSS:
-            value = m.loss_pct;
-            letter = 'P';
-            break;
+    if (_wan_id == 0) {
+        // Local pinger data
+        const LocalPingerMetrics& m = local_pinger_get();
+        switch (_packet_metric) {
+            case PacketMetric::LATENCY:
+                value = m.latency_ms;
+                letter = 'L';
+                break;
+            case PacketMetric::JITTER:
+                value = m.jitter_ms;
+                letter = 'J';
+                break;
+            case PacketMetric::LOSS:
+                value = m.loss_pct;
+                letter = 'P';
+                break;
+        }
+    } else {
+        // WAN metrics data
+        const WanMetrics& m = wan_metrics_get(_wan_id);
+        switch (_packet_metric) {
+            case PacketMetric::LATENCY:
+                value = m.latency_ms;
+                letter = 'L';
+                break;
+            case PacketMetric::JITTER:
+                value = m.jitter_ms;
+                letter = 'J';
+                break;
+            case PacketMetric::LOSS:
+                value = m.loss_pct;
+                letter = 'P';
+                break;
+        }
     }
 
     if (mode == DisplayMode::PREFIX_LETTER) {
