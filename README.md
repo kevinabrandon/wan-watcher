@@ -36,9 +36,7 @@ wan-watcher collects real-time WAN metrics from pfSense (latency, loss, jitter, 
 
 * **ESP32 local pinger**
 
-The local pinger represents the controller’s independent view of internet reachability
-and may disagree with pfSense during routing or firewall faults.
-
+  * _Represents the controller’s independent view of internet reachability and may disagree with pfSense during routing or firewall faults._
   * ICMP pingger to configurable target (default 8.8.8.8)
   * Calculates latency, jitter, loss percentage (dpinger-style)
     * Averaged over a 60 second window with 120 samples (every 500ms)
@@ -47,7 +45,7 @@ and may disagree with pfSense during routing or firewall faults.
 
 ## Failure Behavior
 
-- If pfSense stops reporting: WAN forced DOWN after 3 minutes and 7-Segment displays read "----"
+- If pfSense stops reporting: WAN forced DOWN after 3 minutes and 7-Segment displays read "----" (local pinger continues updating independently)
 - If ESP32 loses Wi-Fi: status LED blinks, last state retained
 
 ## Hardware
@@ -244,6 +242,20 @@ curl -X POST -H "Content-Type: application/json" \
 * [ ] Brightness control (potentiometer or buttons)
 * [ ] Display on/off toggle for "dark mode" (guest sleeping)
 
+#### Visual Freshness Indicator
+
+* [ ] I2C bicolor LED bargraph (HT16K33) for update freshness
+  * 24-segment progress bar driven from the shared I²C bus
+  * Represents time since last pfSense update relative to expected interval
+* [ ] Time-based fill and severity encoding
+  * 0–15s: progressive green fill (fresh / on-time)
+  * 15–30s: green → yellow color degradation (late)
+  * 30–45s: yellow → red color degradation (very late)
+  * >45s: red blink indicating stale / fault
+* [ ] Immediate reset on update receipt
+  * Bar clears instantly when a valid update is received
+* [ ] Configurable timing thresholds
+  * Expected update interval and severity cutoffs adjustable in firmware
 ---
 
 ## License
