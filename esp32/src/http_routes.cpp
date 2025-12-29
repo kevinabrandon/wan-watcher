@@ -4,6 +4,7 @@
 #include <WiFi.h>
 #include <ArduinoJson.h>
 #include "http_routes.h"
+#include "hostname.h"
 #include "leds.h"
 #include "wan_metrics.h"
 #include "local_pinger.h"
@@ -161,8 +162,8 @@ static String local_pinger_metrics_row_html() {
 
 // ---- Main page HTML ----
 static String root_page_html() {
-    String hostname = WiFi.getHostname();
-    String ip = WiFi.localIP().toString();
+    String hostname = get_network_hostname();
+    String ip = get_network_ip();
 
     String html = R"(
 <!DOCTYPE html>

@@ -28,6 +28,26 @@ WebServer server(80);
 static bool g_eth_connected = false;
 static bool g_wifi_connected = false;
 
+// Network interface helpers (declared in hostname.h)
+bool is_eth_connected() { return g_eth_connected; }
+bool is_wifi_connected() { return g_wifi_connected; }
+
+String get_network_ip() {
+    if (g_eth_connected) {
+        return ETH.localIP().toString();
+    }
+    return WiFi.localIP().toString();
+}
+
+String get_network_hostname() {
+    // Both interfaces use the same hostname from build_hostname()
+    // but we need to query the active interface
+    if (g_eth_connected) {
+        return String(ETH.getHostname());
+    }
+    return String(WiFi.getHostname());
+}
+
 // Display system configuration
 static DisplaySystemConfig build_display_config() {
     DisplaySystemConfig config;
