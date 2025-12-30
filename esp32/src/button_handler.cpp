@@ -109,7 +109,9 @@ void ButtonHandler::update() {
 
     // Check for long press while held
     if (_was_pressed && !_long_press_fired && _stable_state == LOW) {
-        if ((now - _press_start_ms) >= _long_press_threshold_ms) {
+        unsigned long held_ms = now - _press_start_ms;
+        if (held_ms >= _long_press_threshold_ms) {
+            Serial.printf("Long press detected after %lu ms\n", held_ms);
             _long_press_fired = true;
             if (_long_press_cb) {
                 _long_press_cb();
