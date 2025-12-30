@@ -82,7 +82,6 @@ static String wan_metrics_row_html(int wan_id) {
     html += "<td>" + String(m.jitter_ms) + " ms</td>";
     html += "<td>" + String(m.down_mbps, 1) + " Mbps</td>";
     html += "<td>" + String(m.up_mbps, 1) + " Mbps</td>";
-    html += "<td>-</td>";  // No sample tracking for WAN metrics
     html += "<td>" + last_update_human(wan_id) + "</td>";
     html += "</tr>";
 
@@ -146,14 +145,13 @@ static String local_pinger_metrics_row_html() {
     const LocalPingerMetrics& m = local_pinger_get();
 
     String html = "<tr>";
-    html += "<td>Local (" + String(local_pinger_get_target()) + ")</td>";
+    html += "<td>Local</td>";
     html += "<td>" + String(wan_state_to_string(m.state)) + "</td>";
     html += "<td>" + String(m.loss_pct) + "%</td>";
     html += "<td>" + String(m.latency_ms) + " ms</td>";
     html += "<td>" + String(m.jitter_ms) + " ms</td>";
     html += "<td>-</td>";  // No download for local pinger
     html += "<td>-</td>";  // No upload for local pinger
-    html += "<td>" + String(m.sample_count) + " / " + String(m.window_secs) + "s</td>";
     html += "<td>" + local_pinger_last_update_human() + "</td>";
     html += "</tr>";
 
@@ -211,7 +209,6 @@ static String root_page_html() {
     <th>Jitter</th>
     <th>Download</th>
     <th>Upload</th>
-    <th>Samples</th>
     <th>Last Update</th>
   </tr>
 )";
