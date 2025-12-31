@@ -9,12 +9,30 @@
 #include "wan_metrics.h"
 #include "local_pinger.h"
 
-// ---- Favicon SVG ----
-static const char* FAVICON_SVG = R"(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+// ---- Favicon SVGs ----
+static const char* FAVICON_GREEN = R"(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
   <circle cx="16" cy="16" r="14" fill="#2ecc71"/>
   <text x="16" y="16" text-anchor="middle" font-size="12" font-weight="700" fill="#ffffff" font-family="system-ui, sans-serif">W</text>
   <text x="16" y="24" text-anchor="middle" font-size="12" font-weight="700" fill="#ffffff" font-family="system-ui, sans-serif">W</text>
 </svg>)";
+static const char* FAVICON_YELLOW = R"(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <circle cx="16" cy="16" r="14" fill="#f1c40f"/>
+  <text x="16" y="16" text-anchor="middle" font-size="12" font-weight="700" fill="#ffffff" font-family="system-ui, sans-serif">W</text>
+  <text x="16" y="24" text-anchor="middle" font-size="12" font-weight="700" fill="#ffffff" font-family="system-ui, sans-serif">W</text>
+</svg>)";
+static const char* FAVICON_RED = R"(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <circle cx="16" cy="16" r="14" fill="#e74c3c"/>
+  <text x="16" y="16" text-anchor="middle" font-size="12" font-weight="700" fill="#ffffff" font-family="system-ui, sans-serif">W</text>
+  <text x="16" y="24" text-anchor="middle" font-size="12" font-weight="700" fill="#ffffff" font-family="system-ui, sans-serif">W</text>
+</svg>)";
+
+static const char* favicon_for_state(WanState state) {
+    switch (state) {
+        case WanState::UP: return "/favicon-green.svg";
+        case WanState::DEGRADED: return "/favicon-yellow.svg";
+        default: return "/favicon-red.svg";
+    }
+}
 
 // ---- Helper: State cell with colored circle ----
 static String state_cell_html(WanState state) {
@@ -91,7 +109,6 @@ static String wan_metrics_row_html(int wan_id) {
     html += "<td>" + String(m.jitter_ms) + " ms</td>";
     html += "<td>" + String(m.down_mbps, 1) + " Mbps</td>";
     html += "<td>" + String(m.up_mbps, 1) + " Mbps</td>";
-    html += "<td>" + last_update_human(wan_id) + "</td>";
     html += "</tr>";
 
     return html;
@@ -150,7 +167,6 @@ static String local_pinger_metrics_row_html() {
     html += "<td>" + String(m.jitter_ms) + " ms</td>";
     html += "<td>-</td>";  // No download for local pinger
     html += "<td>-</td>";  // No upload for local pinger
-    html += "<td>" + local_pinger_last_update_human() + "</td>";
     html += "</tr>";
 
     return html;
@@ -159,6 +175,8 @@ static String local_pinger_metrics_row_html() {
 // ---- Main page HTML ----
 static String root_page_html() {
     String hostname = get_network_hostname();
+    const LocalPingerMetrics& local = local_pinger_get();
+    const char* favicon_url = favicon_for_state(local.state);
 
     String html = R"(
 <!DOCTYPE html>
@@ -167,38 +185,114 @@ static String root_page_html() {
   <meta charset="utf-8">
   <meta http-equiv="refresh" content="10">
   <title>wan-watcher</title>
-  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="icon" type="image/svg+xml" href=")";
+    html += favicon_url;
+    html += R"(">
   <style>
     body {
       font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       margin: 1.5rem;
     }
-    h1 { margin-bottom: 0.5rem; }
+    h1 { margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.3em; }
+    h1 img { height: 1em; width: 1em; }
     .status { margin-top: 0.5rem; margin-bottom: 1.5rem; }
     code { background: #f5f5f5; padding: 2px 4px; border-radius: 3px; }
     table { border-collapse: collapse; margin: 1rem 0; }
     th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
     th { background: #f5f5f5; }
+    .freshness-bar {
+      display: flex;
+      height: 20px;
+      border: 1px solid #ccc;
+      border-radius: 3px;
+      overflow: hidden;
+      margin: 0.5rem 0;
+    }
+    .freshness-segment { height: 100%; }
+    .freshness-green { background: #2ecc71; }
+    .freshness-yellow { background: #f1c40f; }
+    .freshness-red { background: #e74c3c; }
+    .freshness-blink { animation: blink 0.5s infinite; }
+    @keyframes blink { 50% { opacity: 0.3; } }
   </style>
 </head>
 <body>
-<h1>wan-watcher</h1>
+)";
+    html += "<h1><img src=\"" + String(favicon_url) + "\" alt=\"\">wan-watcher<img src=\"" + String(favicon_url) + "\" alt=\"\"></h1>";
+    html += R"(
 )";
 
     html += "<p><strong>Hostname:</strong> <code>" + hostname + "</code><br>";
 
     const char* timestamp = wan_metrics_get_timestamp();
     if (timestamp[0] != '\0') {
-        html += "<strong>Last update:</strong> <code id=\"last-update\">" + String(timestamp) + "</code>";
+        html += "<strong>Last update:</strong> <code id=\"last-update\" data-iso=\"" + String(timestamp) + "\">" + String(timestamp) + "</code>";
+    } else {
+        html += "<strong>Last update:</strong> <code id=\"last-update\">Never</code>";
     }
-    html += "</p>";
+    html += " <span id=\"elapsed-time\" style=\"color:#666;\"></span></p>";
+
+    // Freshness bar
+    html += R"(<div class="freshness-bar">
+  <div id="bar-green" class="freshness-segment freshness-green"></div>
+  <div id="bar-yellow" class="freshness-segment freshness-yellow"></div>
+  <div id="bar-red" class="freshness-segment freshness-red"></div>
+</div>)";
+
     html += R"(<script>
 (function() {
+  var barG = document.getElementById('bar-green');
+  var barY = document.getElementById('bar-yellow');
+  var barR = document.getElementById('bar-red');
+  var bar = document.querySelector('.freshness-bar');
+  var elapsedEl = document.getElementById('elapsed-time');
+
   var el = document.getElementById('last-update');
-  if (el) {
-    var d = new Date(el.textContent);
-    if (!isNaN(d)) el.textContent = d.toLocaleString();
+  var updateTime = null;
+  if (el && el.dataset.iso) {
+    updateTime = new Date(el.dataset.iso);
+    if (!isNaN(updateTime)) {
+      el.textContent = updateTime.toLocaleString();
+    } else {
+      updateTime = null;
+    }
   }
+
+  function update() {
+    var elapsed = updateTime ? Math.floor((Date.now() - updateTime.getTime()) / 1000) : 999;
+    var gPct = 0, yPct = 0, rPct = 0;
+    if (elapsed <= 15) {
+      gPct = (elapsed / 15) * 100;
+    } else if (elapsed <= 30) {
+      yPct = ((elapsed - 15) / 15) * 100;
+    } else if (elapsed <= 45) {
+      rPct = ((elapsed - 30) / 15) * 100;
+    } else {
+      rPct = 100;
+    }
+    barG.style.width = gPct + '%';
+    barY.style.width = yPct + '%';
+    barR.style.width = rPct + '%';
+    if (elapsed > 45) {
+      bar.classList.add('freshness-blink');
+    } else {
+      bar.classList.remove('freshness-blink');
+    }
+    elapsedEl.textContent = '(' + elapsed + 's ago)';
+  }
+  update();
+  setInterval(update, 1000);
+
+  // Match bar width to table (wait for DOM to be ready)
+  document.addEventListener('DOMContentLoaded', function() {
+    var tbl = document.querySelector('table');
+    if (tbl) {
+      bar.style.width = tbl.offsetWidth + 'px';
+      window.addEventListener('resize', function() {
+        bar.style.width = tbl.offsetWidth + 'px';
+      });
+    }
+  });
 })();
 </script>)";
 
@@ -218,7 +312,6 @@ static String root_page_html() {
     <th>Jitter</th>
     <th>Download</th>
     <th>Upload</th>
-    <th>Last Update</th>
   </tr>
 )";
     html += wan_metrics_row_html(1);
@@ -333,9 +426,18 @@ void setup_routes(WebServer& server) {
         handle_wans_post(server);
     });
 
-    // Favicon
+    // Favicons
+    server.on("/favicon-green.svg", [&server]() {
+        server.send(200, "image/svg+xml", FAVICON_GREEN);
+    });
+    server.on("/favicon-yellow.svg", [&server]() {
+        server.send(200, "image/svg+xml", FAVICON_YELLOW);
+    });
+    server.on("/favicon-red.svg", [&server]() {
+        server.send(200, "image/svg+xml", FAVICON_RED);
+    });
     server.on("/favicon.svg", [&server]() {
-        server.send(200, "image/svg+xml", FAVICON_SVG);
+        server.send(200, "image/svg+xml", FAVICON_GREEN);  // Default to green
     });
     server.on("/favicon.ico", [&server]() {
         server.send(204);  // Some browsers still request .ico
