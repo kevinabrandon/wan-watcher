@@ -20,7 +20,6 @@ wan-watcher collects real-time WAN metrics from pfSense (latency, loss, jitter, 
 
 * **ESP32 indicator panel**
   * Receives metrics via JSON API (`POST /api/wans` batch endpoint)
-  * Web UI with auto-refresh and network metrics table
   * LED indicators for WAN1, WAN2, and Local state (UP / DEGRADED / DOWN) via MCP23017 I2C expander
   * Heartbeat LED showing how recent the last pfSense update was:
     * `< 15s`: OFF
@@ -30,9 +29,24 @@ wan-watcher collects real-time WAN metrics from pfSense (latency, loss, jitter, 
   * Dual 7-segment displays per WAN:
     * **Packet display**: Shows latency (L), jitter (J), or packet loss (P)
     * **Bandwidth display**: Shows download (d) or upload (U) in Mbps
+    * Displays show "----" when interface is DOWN or no data received
   * Button controls for display cycling:
     * Short press: advance to next metric
-    * Long press: toggle auto-cycle mode (5-second interval)
+    * Long press: toggle auto-cycle mode
+  * Auto-cycle enabled by default (5-second interval)
+
+* **Web UI**
+  * Live-updating metrics table (refreshes every 5 seconds without page reload)
+  * CSS-based 7-segment display panel mimicking the physical hardware layout
+  * Virtual state LEDs (UP/DEGRADED/DOWN) for each interface
+  * Freshness indicator bar showing time since last pfSense update:
+    * 0–15s: green bar fills (normal)
+    * 15–30s: yellow bar fills (late)
+    * 30–45s: red bar fills (very late)
+    * >45s: full red bar blinking (stale)
+  * Click on displays to cycle metrics, auto-cycles every 5 seconds
+  * Dynamic favicon color based on Local pinger state (green/yellow/red)
+  * Local timezone display for timestamps
 
 * **ESP32 local pinger**
 
@@ -153,10 +167,13 @@ Or with a custom interval:
 
 ## JSON API (ESP32)
 
-The ESP32 exposes a JSON API for receiving WAN metrics:
+The ESP32 exposes a JSON API for metrics:
 
-**Endpoint:**
-- `POST /api/wans` - Batch update for all WANs
+**Endpoints:**
+- `POST /api/wans` - Batch update for all WANs (used by pfSense daemon)
+- `GET /api/status` - Get current metrics for all interfaces (used by Web UI)
+
+### POST /api/wans
 
 **Payload format:**
 ```json
@@ -195,6 +212,36 @@ curl -X POST -H "Content-Type: application/json" \
   http://wan-watcher.local/api/wans
 ```
 
+### GET /api/status
+
+Returns current metrics for all interfaces. Used by the Web UI for live updates.
+
+**Response format:**
+```json
+{
+  "timestamp": "2025-01-15T10:30:00Z",
+  "router_ip": "192.168.1.1",
+  "wan1": {
+    "state": "up",
+    "latency_ms": 6,
+    "jitter_ms": 0,
+    "loss_pct": 0,
+    "down_mbps": 2.0,
+    "up_mbps": 3.3,
+    "monitor_ip": "8.8.8.8",
+    "gateway_ip": "100.64.1.1",
+    "local_ip": "100.64.1.5"
+  },
+  "wan2": { ... },
+  "local": {
+    "state": "up",
+    "latency_ms": 12,
+    "jitter_ms": 1,
+    "loss_pct": 0
+  }
+}
+```
+
 ## Security Notes
 
 - Intended for a trusted VLAN
@@ -223,13 +270,24 @@ curl -X POST -H "Content-Type: application/json" \
  - WAN1 and WAN2 LED state machines (UP / DEGRADED / DOWN)
  - Heartbeat LED (off / slow / medium / fast blink)
  - Auto-timeout all WANs to DOWN if no update for 45 seconds
- - Web UI with network metrics table and local timezone display
  - MCP23017 GPIO expander for LED control
  - LED abstraction class (supports GPIO and MCP23017 pins)
  - Multi-WAN support (2 WANs with 2 displays each)
  - Display modes (latency / jitter / loss / download / upload)
  - Button input for cycling modes (short press: advance, long press: toggle auto-cycle)
  - Multiple 7-segment displays (packet + bandwidth per WAN)
+ - Auto-cycle enabled by default (5-second interval)
+ - Displays show "----" when interface is DOWN
+
+#### ESP32 Web UI
+
+ - Live-updating metrics table (every 5 seconds, no page reload)
+ - CSS-based 7-segment display panel mimicking hardware layout
+ - Virtual state LEDs (UP/DEGRADED/DOWN) for each interface
+ - Freshness indicator bar (green/yellow/red based on data age)
+ - Click-to-cycle and auto-cycle for display metrics
+ - Dynamic favicon color based on Local pinger state
+ - Local timezone display for timestamps
 
 #### ESP32 Local Pinger
 
@@ -241,25 +299,17 @@ curl -X POST -H "Content-Type: application/json" \
 
 ### Planned
 
-#### Web UI Enhancements
-
-* [ ] Live-updating "time since last update" (no page reload)
-* [ ] Dynamic metrics refresh via JavaScript
-
 #### Display Controls
 
 * [ ] Brightness control (potentiometer or buttons)
 * [ ] Display on/off toggle for "dark mode" (guest sleeping)
 
-#### Visual Freshness Indicator
+#### Hardware Visual Freshness Indicator
 
 * [ ] I2C bicolor LED bargraph (HT16K33) for update freshness
   * 24-segment progress bar driven from the shared I²C bus
   * Acts as a visual timer showing time since last pfSense update
-* [ ] Time-based fill with color stages
-  * 0–15s: green bar fills left-to-right (expected refresh interval)
-  * 15–30s: yellow bar fills left-to-right (late)
-  * 30–45s: red bar fills left-to-right (very late)
+* [ ] Time-based fill with color stages (same as Web UI freshness bar)
   * >45s: full red bar blinking (stale / fault)
 * [ ] Immediate reset on update receipt
   * Bar clears instantly when a valid update is received
