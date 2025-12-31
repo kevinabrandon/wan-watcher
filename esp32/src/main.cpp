@@ -53,7 +53,7 @@ static DisplaySystemConfig build_display_config() {
     DisplaySystemConfig config;
     config.mode = DisplayMode::PREFIX_LETTER;
     config.cycle_interval_ms = 5000;       // 5 second cycle
-    config.auto_cycle_enabled = false;     // Start locked on L and d
+    config.auto_cycle_enabled = true;      // Auto-cycle by default
     config.base_address = 0x71;            // WAN1 packet=0x71, WAN1 bw=0x72, etc.
 
     // Button configuration (two buttons for independent control)

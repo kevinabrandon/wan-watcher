@@ -83,9 +83,9 @@ WanState wan_state_from_string(const char* str) {
 
 const char* wan_state_to_string(WanState state) {
     switch (state) {
-        case WanState::UP: return "UP";
-        case WanState::DEGRADED: return "DEGRADED";
+        case WanState::UP: return "up";
+        case WanState::DEGRADED: return "degraded";
         case WanState::DOWN:
-        default: return "DOWN";
+        default: return "down";
     }
 }
