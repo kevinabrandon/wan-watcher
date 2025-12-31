@@ -57,12 +57,12 @@ static DisplaySystemConfig build_display_config() {
     config.base_address = 0x71;            // WAN1 packet=0x71, WAN1 bw=0x72, etc.
 
     // Button configuration (two buttons for independent control)
-    // Button 1: controls packet display (L/J/P) - MCP pin 13
+    // Button 1: controls packet display (L/J/P) - MCP pin 14
     config.button1_type = ButtonPinSource::MCP;
-    config.button1_pin = 13;
-    // Button 2: controls bandwidth display (d/U) - MCP pin 14
+    config.button1_pin = 14;
+    // Button 2: controls bandwidth display (d/U) - MCP pin 15
     config.button2_type = ButtonPinSource::MCP;
-    config.button2_pin = 14;
+    config.button2_pin = 15;
     config.long_press_ms = 1000;
 
     // Indicator LED pins (only used in INDICATOR_LED mode)
@@ -227,7 +227,7 @@ void setup() {
 
 void loop() {
     server.handleClient();
-    wan1_heartbeat_check();
+    router_heartbeat_check();
     display_update();
 
     // Update local pinger and its LEDs

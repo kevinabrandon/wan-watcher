@@ -19,14 +19,14 @@ wan-watcher collects real-time WAN metrics from pfSense (latency, loss, jitter, 
   * Regularly posts to ESP32 each WAN's state
 
 * **ESP32 indicator panel**
-  * Receives metrics via JSON API (`POST /api/wan1`, `/api/wan2`)
-  * Web UI with auto-refresh and metrics table
-  * LED indicators for WAN state (UP / DEGRADED / DOWN) via MCP23017 I2C expander
+  * Receives metrics via JSON API (`POST /api/wans` batch endpoint)
+  * Web UI with auto-refresh and network metrics table
+  * LED indicators for WAN1, WAN2, and Local state (UP / DEGRADED / DOWN) via MCP23017 I2C expander
   * Heartbeat LED showing how recent the last pfSense update was:
-    * `< 45s`: OFF
-    * `45–90s`: slow blink
-    * `90–180s`: fast blink
-    * `>= 3m`: solid ON + WAN forced DOWN
+    * `< 15s`: OFF
+    * `15–30s`: slow blink
+    * `30–45s`: medium blink
+    * `> 45s`: fast blink + all WANs forced DOWN
   * Dual 7-segment displays per WAN:
     * **Packet display**: Shows latency (L), jitter (J), or packet loss (P)
     * **Bandwidth display**: Shows download (d) or upload (U) in Mbps
@@ -45,7 +45,7 @@ wan-watcher collects real-time WAN metrics from pfSense (latency, loss, jitter, 
 
 ## Failure Behavior
 
-- If pfSense stops reporting: WAN forced DOWN after 3 minutes; 7-segment displays read "----" (local pinger continues updating independently)
+- If pfSense stops reporting: all WANs forced DOWN after 45 seconds; 7-segment displays read "----" (local pinger continues updating independently)
 - If ESP32 loses Wi-Fi: status LED blinks, last state retained
 
 ## Hardware
@@ -70,14 +70,14 @@ wan-watcher collects real-time WAN metrics from pfSense (latency, loss, jitter, 
 | MCP 0 | MCP23017 | WAN1 UP (green) |
 | MCP 1 | MCP23017 | WAN1 DEGRADED (yellow) |
 | MCP 2 | MCP23017 | WAN1 DOWN (red) |
-| MCP 5 | MCP23017 | Local UP (green) |
-| MCP 6 | MCP23017 | Local DEGRADED (yellow) |
-| MCP 7 | MCP23017 | Local DOWN (red) |
-| MCP 8 | MCP23017 | WAN2 UP (green) |
-| MCP 9 | MCP23017 | WAN2 DEGRADED (yellow) |
-| MCP 10 | MCP23017 | WAN2 DOWN (red) |
-| MCP 13 | MCP23017 | Packet display button (INPUT_PULLUP) |
-| MCP 14 | MCP23017 | Bandwidth display button (INPUT_PULLUP) |
+| MCP 3 | MCP23017 | WAN2 UP (green) |
+| MCP 4 | MCP23017 | WAN2 DEGRADED (yellow) |
+| MCP 5 | MCP23017 | WAN2 DOWN (red) |
+| MCP 6 | MCP23017 | Local UP (green) |
+| MCP 7 | MCP23017 | Local DEGRADED (yellow) |
+| MCP 8 | MCP23017 | Local DOWN (red) |
+| MCP 14 | MCP23017 | Packet display button (INPUT_PULLUP) |
+| MCP 15 | MCP23017 | Bandwidth display button (INPUT_PULLUP) |
 | GPIO 4 | ESP32 | WiFi status LED |
 | GPIO 5 | ESP32 | Heartbeat LED |
 
@@ -119,16 +119,10 @@ cp esp32/src/wifi_config.h.example esp32/src/wifi_config.h
 
 `wifi_config.h` is intentionally **ignored by git** and should never be committed.
 
-Each ESP32 assigns itself a unique hostname based on its MAC address:
+The ESP32 uses the hostname `wan-watcher` and exposes itself via mDNS (Bonjour/Avahi):
 
 ```
-wan-watcher-xxxxxx
-```
-
-The device also exposes itself via mDNS (Bonjour/Avahi):
-
-```
-http://wan-watcher-xxxxxx.local/
+http://wan-watcher.local/
 ```
 
 Your OS must support mDNS for this to work (macOS: built-in, Linux: Avahi, Windows: Bonjour).
@@ -161,28 +155,44 @@ Or with a custom interval:
 
 The ESP32 exposes a JSON API for receiving WAN metrics:
 
-**Endpoints:**
-- `POST /api/wan1` - Update WAN1 metrics
-- `POST /api/wan2` - Update WAN2 metrics
-- `POST /api/wans` - Batch update (accepts `{"wan1":{...}, "wan2":{...}}`)
+**Endpoint:**
+- `POST /api/wans` - Batch update for all WANs
 
 **Payload format:**
 ```json
 {
-  "state": "up",
-  "loss_pct": 0,
-  "latency_ms": 6,
-  "jitter_ms": 0,
-  "down_mbps": 2.0,
-  "up_mbps": 3.3
+  "router_ip": "192.168.1.1",
+  "timestamp": "2025-01-15T10:30:00Z",
+  "wan1": {
+    "state": "up",
+    "loss_pct": 0,
+    "latency_ms": 6,
+    "jitter_ms": 0,
+    "down_mbps": 2.0,
+    "up_mbps": 3.3,
+    "local_ip": "100.64.1.5",
+    "gateway_ip": "100.64.1.1",
+    "monitor_ip": "8.8.8.8"
+  },
+  "wan2": {
+    "state": "up",
+    "loss_pct": 0,
+    "latency_ms": 12,
+    "jitter_ms": 1,
+    "down_mbps": 50.0,
+    "up_mbps": 10.0,
+    "local_ip": "192.168.100.2",
+    "gateway_ip": "192.168.100.1",
+    "monitor_ip": "1.1.1.1"
+  }
 }
 ```
 
 **Example:**
 ```
 curl -X POST -H "Content-Type: application/json" \
-  -d '{"state":"up","loss_pct":0,"latency_ms":6,"jitter_ms":0,"down_mbps":2.0,"up_mbps":3.3}' \
-  http://wan-watcher-xxxxxx.local/api/wan1
+  -d '{"router_ip":"192.168.1.1","timestamp":"2025-01-15T10:30:00Z","wan1":{"state":"up","loss_pct":0,"latency_ms":6,"jitter_ms":0,"down_mbps":2.0,"up_mbps":3.3,"local_ip":"100.64.1.5","gateway_ip":"100.64.1.1","monitor_ip":"8.8.8.8"}}' \
+  http://wan-watcher.local/api/wans
 ```
 
 ## Security Notes
@@ -208,16 +218,15 @@ curl -X POST -H "Content-Type: application/json" \
 #### ESP32 Side
 
  - Wi-Fi + Ethernet support with status LED
- - Dynamic hostname + mDNS support
+ - Static hostname (`wan-watcher`) + mDNS support
  - HTTP server + routes
- - WAN1 LED state machine (UP / DEGRADED / DOWN)
- - Heartbeat LED (off / slow blink / fast blink / solid)
- - Auto-timeout WAN1 to DOWN if no update for 3 minutes
- - Web UI with color indicators
+ - WAN1 and WAN2 LED state machines (UP / DEGRADED / DOWN)
+ - Heartbeat LED (off / slow / medium / fast blink)
+ - Auto-timeout all WANs to DOWN if no update for 45 seconds
+ - Web UI with network metrics table and local timezone display
  - MCP23017 GPIO expander for LED control
- - Led abstraction class (supports GPIO and MCP23017 pins)
- - 7-segment display showing seconds since last update
- - Multi-WAN support (up to 2 WANs with 2 displays each)
+ - LED abstraction class (supports GPIO and MCP23017 pins)
+ - Multi-WAN support (2 WANs with 2 displays each)
  - Display modes (latency / jitter / loss / download / upload)
  - Button input for cycling modes (short press: advance, long press: toggle auto-cycle)
  - Multiple 7-segment displays (packet + bandwidth per WAN)
@@ -246,16 +255,14 @@ curl -X POST -H "Content-Type: application/json" \
 
 * [ ] I2C bicolor LED bargraph (HT16K33) for update freshness
   * 24-segment progress bar driven from the shared I²C bus
-  * Represents time since last pfSense update relative to expected interval
-* [ ] Time-based fill and severity encoding
-  * 0–15s: progressive green fill (fresh / on-time)
-  * 15–30s: green → yellow color degradation (late)
-  * 30–45s: yellow → red color degradation (very late)
-  * >45s: red blink indicating stale / fault
+  * Acts as a visual timer showing time since last pfSense update
+* [ ] Time-based fill with color stages
+  * 0–15s: green bar fills left-to-right (expected refresh interval)
+  * 15–30s: yellow bar fills left-to-right (late)
+  * 30–45s: red bar fills left-to-right (very late)
+  * >45s: full red bar blinking (stale / fault)
 * [ ] Immediate reset on update receipt
   * Bar clears instantly when a valid update is received
-* [ ] Configurable timing thresholds
-  * Expected update interval and severity cutoffs adjustable in firmware
 ---
 
 ## License
