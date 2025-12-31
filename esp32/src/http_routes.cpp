@@ -16,6 +16,19 @@ static const char* FAVICON_SVG = R"(<svg xmlns="http://www.w3.org/2000/svg" view
   <text x="16" y="24" text-anchor="middle" font-size="12" font-weight="700" fill="#ffffff" font-family="system-ui, sans-serif">W</text>
 </svg>)";
 
+// ---- Helper: State cell with colored circle ----
+static String state_cell_html(WanState state) {
+    switch (state) {
+        case WanState::UP:
+            return "&#x1F7E2; UP";
+        case WanState::DEGRADED:
+            return "&#x1F7E1; DEGRADED";
+        case WanState::DOWN:
+        default:
+            return "&#x1F534; DOWN";
+    }
+}
+
 // ---- Helper: WAN status line with colored circles ----
 static String wan_state_line_html(int wan_id) {
     const WanMetrics& m = wan_metrics_get(wan_id);
@@ -70,13 +83,23 @@ static String last_update_human(int wan_id) {
     return s;
 }
 
+// ---- Helper: WAN description (TODO: make configurable) ----
+static String wan_description(int wan_id) {
+    switch (wan_id) {
+        case 1: return "PeakWifi";
+        case 2: return "Starlink";
+        default: return "";
+    }
+}
+
 // ---- Helper: WAN metrics table row ----
 static String wan_metrics_row_html(int wan_id) {
     const WanMetrics& m = wan_metrics_get(wan_id);
 
     String html = "<tr>";
     html += "<td>WAN" + String(wan_id) + "</td>";
-    html += "<td>" + String(wan_state_to_string(m.state)) + "</td>";
+    html += "<td>" + wan_description(wan_id) + "</td>";
+    html += "<td>" + state_cell_html(m.state) + "</td>";
     html += "<td>" + String(m.loss_pct) + "%</td>";
     html += "<td>" + String(m.latency_ms) + " ms</td>";
     html += "<td>" + String(m.jitter_ms) + " ms</td>";
@@ -146,7 +169,8 @@ static String local_pinger_metrics_row_html() {
 
     String html = "<tr>";
     html += "<td>Local</td>";
-    html += "<td>" + String(wan_state_to_string(m.state)) + "</td>";
+    html += "<td>" + String(local_pinger_get_target()) + "</td>";
+    html += "<td>" + state_cell_html(m.state) + "</td>";
     html += "<td>" + String(m.loss_pct) + "%</td>";
     html += "<td>" + String(m.latency_ms) + " ms</td>";
     html += "<td>" + String(m.jitter_ms) + " ms</td>";
@@ -188,12 +212,6 @@ static String root_page_html() {
 <h1>wan-watcher</h1>
 )";
 
-    html += "<h2 class=\"status\">";
-    html += wan_state_line_html(1);
-    html += "<br>";
-    html += local_pinger_state_line_html();
-    html += "</h2>";
-
     html += "<p><strong>Hostname:</strong> <code>" + hostname + "</code><br>";
     html += "<strong>IP:</strong> <code>" + ip + "</code></p>";
 
@@ -203,6 +221,7 @@ static String root_page_html() {
 <table>
   <tr>
     <th>WAN</th>
+    <th>Description</th>
     <th>State</th>
     <th>Loss</th>
     <th>Latency</th>
