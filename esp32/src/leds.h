@@ -12,6 +12,9 @@
 extern Led g_led_wan1_up;
 extern Led g_led_wan1_degraded;
 extern Led g_led_wan1_down;
+extern Led g_led_wan2_up;
+extern Led g_led_wan2_degraded;
+extern Led g_led_wan2_down;
 extern Led g_led_local_up;
 extern Led g_led_local_degraded;
 extern Led g_led_local_down;
@@ -32,12 +35,15 @@ void leds_init_with_displays(const DisplaySystemConfig& config);
 // Update WAN1 LEDs based on state
 void wan1_set_leds(WanState state);
 
+// Update WAN2 LEDs based on state
+void wan2_set_leds(WanState state);
+
 // Update local pinger LEDs based on state
 void local_pinger_set_leds(WanState state);
 
-// Heartbeat check - call regularly from loop()
-// Uses wan_metrics[0].last_update_ms for timing
-void wan1_heartbeat_check();
+// Router heartbeat check - call regularly from loop()
+// Monitors pfSense daemon connection, forces all WANs DOWN on timeout
+void router_heartbeat_check();
 
 // 7-segment display update
 // Uses DisplayManager if active, otherwise legacy single display

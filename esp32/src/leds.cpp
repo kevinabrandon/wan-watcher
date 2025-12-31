@@ -29,18 +29,23 @@ Led g_led_wan1_up(0, LedPinType::MCP, &g_mcp);
 Led g_led_wan1_degraded(1, LedPinType::MCP, &g_mcp);
 Led g_led_wan1_down(2, LedPinType::MCP, &g_mcp);
 
-// MCP-based LEDs - Local pinger (pins 5-7)
-Led g_led_local_up(5, LedPinType::MCP, &g_mcp);
-Led g_led_local_degraded(6, LedPinType::MCP, &g_mcp);
-Led g_led_local_down(7, LedPinType::MCP, &g_mcp);
+// MCP-based LEDs - WAN2 (pins 3-5)
+Led g_led_wan2_up(3, LedPinType::MCP, &g_mcp);
+Led g_led_wan2_degraded(4, LedPinType::MCP, &g_mcp);
+Led g_led_wan2_down(5, LedPinType::MCP, &g_mcp);
+
+// MCP-based LEDs - Local pinger (pins 6-8)
+Led g_led_local_up(6, LedPinType::MCP, &g_mcp);
+Led g_led_local_degraded(7, LedPinType::MCP, &g_mcp);
+Led g_led_local_down(8, LedPinType::MCP, &g_mcp);
 
 // GPIO-based LEDs
 Led g_led_status1(4, LedPinType::GPIO);
 Led g_led_heartbeat(5, LedPinType::GPIO);
 
-// Heartbeat tracking
-static bool g_wan1_timed_out = false;
-static const unsigned long WAN1_TIMEOUT_MS = 3UL * 60UL * 1000UL; // 3 minutes
+// Heartbeat tracking (monitors pfSense daemon connection)
+static bool g_router_timed_out = false;
+static const unsigned long ROUTER_TIMEOUT_MS = 45UL * 1000UL; // 45 seconds
 
 // Heartbeat LED blink bookkeeping
 static unsigned long g_hb_last_toggle_ms = 0;
@@ -90,6 +95,32 @@ void wan1_set_leds(WanState state) {
     }
 }
 
+void wan2_set_leds(WanState state) {
+    switch (state) {
+        case WanState::UP:
+            g_led_wan2_up.set(true);
+            g_led_wan2_degraded.set(false);
+            g_led_wan2_down.set(false);
+            Serial.println("WAN2 LEDs -> UP");
+            break;
+
+        case WanState::DEGRADED:
+            g_led_wan2_up.set(false);
+            g_led_wan2_degraded.set(true);
+            g_led_wan2_down.set(false);
+            Serial.println("WAN2 LEDs -> DEGRADED");
+            break;
+
+        case WanState::DOWN:
+        default:
+            g_led_wan2_up.set(false);
+            g_led_wan2_degraded.set(false);
+            g_led_wan2_down.set(true);
+            Serial.println("WAN2 LEDs -> DOWN");
+            break;
+    }
+}
+
 void local_pinger_set_leds(WanState state) {
     switch (state) {
         case WanState::UP:
@@ -120,24 +151,21 @@ static void heartbeat_set(bool on) {
 }
 
 static void heartbeat_update_pattern(unsigned long now, unsigned long elapsed_ms) {
-    // Very recent (< 45s since last update): LED OFF
-    if (elapsed_ms < 45UL * 1000UL) {
+    // Very recent (< 15s since last update): LED OFF
+    if (elapsed_ms < 15UL * 1000UL) {
         heartbeat_set(false);
         return;
     }
 
-    // >= timeout (3 min): solid ON
-    if (elapsed_ms >= WAN1_TIMEOUT_MS) {
-        heartbeat_set(true);
-        return;
-    }
-
-    // 45–90s: slow blink, 90–180s: fast blink
+    // Determine blink interval based on staleness
+    // 15-30s: slow blink (500ms), 30-45s: medium blink (250ms), >45s: fast blink (100ms)
     unsigned long interval_ms;
-    if (elapsed_ms < 90UL * 1000UL) {
+    if (elapsed_ms < 30UL * 1000UL) {
         interval_ms = 500UL;
+    } else if (elapsed_ms < 45UL * 1000UL) {
+        interval_ms = 250UL;
     } else {
-        interval_ms = 200UL;
+        interval_ms = 100UL;
     }
 
     if (now - g_hb_last_toggle_ms >= interval_ms) {
@@ -146,7 +174,7 @@ static void heartbeat_update_pattern(unsigned long now, unsigned long elapsed_ms
     }
 }
 
-void wan1_heartbeat_check() {
+void router_heartbeat_check() {
     unsigned long now = millis();
     const WanMetrics& m = wan_metrics_get(1);
 
@@ -161,16 +189,17 @@ void wan1_heartbeat_check() {
     // Update heartbeat LED pattern first
     heartbeat_update_pattern(now, elapsed);
 
-    // Timeout → force WAN1 DOWN
-    if (elapsed > WAN1_TIMEOUT_MS) {
-        if (!g_wan1_timed_out) {
-            g_wan1_timed_out = true;
-            Serial.println("WAN1 heartbeat timeout -> forcing DOWN");
+    // Timeout → force all WANs DOWN (daemon sends both in single batch)
+    if (elapsed > ROUTER_TIMEOUT_MS) {
+        if (!g_router_timed_out) {
+            g_router_timed_out = true;
+            Serial.println("Router heartbeat timeout -> forcing all WANs DOWN");
             wan1_set_leds(WanState::DOWN);
+            wan2_set_leds(WanState::DOWN);
         }
     } else {
         // Reset timeout flag when we get updates
-        g_wan1_timed_out = false;
+        g_router_timed_out = false;
     }
 }
 
@@ -205,6 +234,9 @@ void leds_init() {
     g_led_wan1_up.begin();
     g_led_wan1_degraded.begin();
     g_led_wan1_down.begin();
+    g_led_wan2_up.begin();
+    g_led_wan2_degraded.begin();
+    g_led_wan2_down.begin();
     g_led_local_up.begin();
     g_led_local_degraded.begin();
     g_led_local_down.begin();
@@ -212,7 +244,7 @@ void leds_init() {
     g_led_heartbeat.begin();
 
     // Reset heartbeat state
-    g_wan1_timed_out = false;
+    g_router_timed_out = false;
     g_hb_last_toggle_ms = 0;
 
     // Not using display manager in legacy mode
@@ -266,6 +298,9 @@ void leds_init_with_displays(const DisplaySystemConfig& config) {
     g_led_wan1_up.begin();
     g_led_wan1_degraded.begin();
     g_led_wan1_down.begin();
+    g_led_wan2_up.begin();
+    g_led_wan2_degraded.begin();
+    g_led_wan2_down.begin();
     g_led_local_up.begin();
     g_led_local_degraded.begin();
     g_led_local_down.begin();
@@ -273,7 +308,7 @@ void leds_init_with_displays(const DisplaySystemConfig& config) {
     g_led_heartbeat.begin();
 
     // Reset heartbeat state
-    g_wan1_timed_out = false;
+    g_router_timed_out = false;
     g_hb_last_toggle_ms = 0;
 }
 
