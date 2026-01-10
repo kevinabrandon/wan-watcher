@@ -22,6 +22,7 @@ static bool g_display_ok = false;
 DisplayManager g_display_manager;
 ButtonHandler g_button_handler_packet;
 ButtonHandler g_button_handler_bandwidth;
+FreshnessBar g_freshness_bar;
 static bool g_use_display_manager = false;
 
 // MCP-based LEDs - WAN1 (pins 0-2)
@@ -203,6 +204,21 @@ void router_heartbeat_check() {
     }
 }
 
+void freshness_bar_update() {
+    if (!g_freshness_bar.isReady()) return;
+
+    const WanMetrics& m = wan_metrics_get(1);
+
+    if (m.last_update_ms == 0) {
+        // Never received an update
+        g_freshness_bar.update(0, true);
+        return;
+    }
+
+    unsigned long elapsed = millis() - m.last_update_ms;
+    g_freshness_bar.update(elapsed, false);
+}
+
 void leds_init() {
     // Initialize I2C for MCP23017
     Wire.begin(I2C_SDA, I2C_SCL);
@@ -269,6 +285,9 @@ void leds_init_with_displays(const DisplaySystemConfig& config) {
     // Initialize display manager (handles all 7-segment displays)
     g_display_manager.begin(config, &g_mcp, &Wire);
     g_use_display_manager = true;
+
+    // Initialize freshness bar (bicolor LED bargraph)
+    g_freshness_bar.begin(FRESHNESS_BAR_ADDR, &Wire);
 
     // Initialize packet button handler if configured
     if (config.button1_type != ButtonPinSource::NONE && config.button1_pin != 0) {
