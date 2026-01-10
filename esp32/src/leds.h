@@ -19,7 +19,6 @@ extern Led g_led_wan2_down;
 extern Led g_led_local_up;
 extern Led g_led_local_degraded;
 extern Led g_led_local_down;
-extern Led g_led_heartbeat;
 extern Led g_led_status1;
 
 // Display manager and button handlers (defined in leds.cpp)
