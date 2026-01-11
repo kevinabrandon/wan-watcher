@@ -23,6 +23,9 @@ public:
     // Set brightness (0-15)
     void setBrightness(uint8_t brightness);
 
+    // Turn display on/off (uses HT16K33 display setup register)
+    void setDisplayOn(bool on);
+
     // Render current metric value
     void render(DisplayMode mode);
 
@@ -40,6 +43,8 @@ public:
 
 private:
     Adafruit_7segment _display;
+    TwoWire* _wire;
+    uint8_t _i2c_addr;
     bool _ready;
     DisplayType _type;
     int _wan_id;

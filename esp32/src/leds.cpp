@@ -46,6 +46,20 @@ Led g_led_status1(4, LedPinType::GPIO);
 // Router timeout tracking (monitors pfSense daemon connection)
 static bool g_router_timed_out = false;
 
+// Global brightness level (0-15, where 0 = off)
+static uint8_t g_brightness = 8;
+static bool g_displays_on = true;
+
+// Physical power switch (optional)
+static const uint8_t POWER_SWITCH_PIN = 13;  // MCP pin for toggle switch
+static bool g_power_switch_enabled = false;
+static bool g_power_switch_last_state = true;
+static unsigned long g_power_switch_last_change_ms = 0;
+static const unsigned long POWER_SWITCH_DEBOUNCE_MS = 50;
+
+// Brightness potentiometer
+BrightnessPotentiometer g_brightness_pot;
+
 // Button callback functions for packet display
 static void on_packet_short_press() {
     g_display_manager.advancePacketMetric();
@@ -65,6 +79,7 @@ static void on_bandwidth_long_press() {
 }
 
 void wan1_set_leds(WanState state) {
+    if (!g_displays_on) return;  // All LEDs off when displays disabled
     switch (state) {
         case WanState::UP:
             g_led_wan1_up.set(true);
@@ -91,6 +106,7 @@ void wan1_set_leds(WanState state) {
 }
 
 void wan2_set_leds(WanState state) {
+    if (!g_displays_on) return;  // All LEDs off when displays disabled
     switch (state) {
         case WanState::UP:
             g_led_wan2_up.set(true);
@@ -117,6 +133,7 @@ void wan2_set_leds(WanState state) {
 }
 
 void local_pinger_set_leds(WanState state) {
+    if (!g_displays_on) return;  // All LEDs off when displays disabled
     switch (state) {
         case WanState::UP:
             g_led_local_up.set(true);
@@ -149,7 +166,23 @@ static void wan_leds_all_off() {
     g_led_wan2_down.set(false);
 }
 
+// Helper to turn off ALL LEDs (used when displays are disabled)
+static void all_leds_off() {
+    g_led_wan1_up.set(false);
+    g_led_wan1_degraded.set(false);
+    g_led_wan1_down.set(false);
+    g_led_wan2_up.set(false);
+    g_led_wan2_degraded.set(false);
+    g_led_wan2_down.set(false);
+    g_led_local_up.set(false);
+    g_led_local_degraded.set(false);
+    g_led_local_down.set(false);
+    g_led_status1.set(false);
+}
+
 void router_heartbeat_check() {
+    if (!g_displays_on) return;  // Skip when displays disabled
+
     const WanMetrics& m = wan_metrics_get(1);
     bool is_stale = false;
 
@@ -338,4 +371,88 @@ void display_update() {
         g_display.print((int)elapsed_secs, DEC);
     }
     g_display.writeDisplay();
+}
+
+void set_display_brightness(uint8_t brightness) {
+    if (brightness > 15) brightness = 15;
+    g_brightness = brightness;
+
+    // Apply brightness directly (0-15 maps to HT16K33 0-15)
+    g_display_manager.setBrightness(brightness);
+    g_freshness_bar.setBrightness(brightness);
+
+    // Apply to legacy display if in use
+    if (g_display_ok && !g_use_display_manager) {
+        g_display.setBrightness(brightness);
+    }
+}
+
+uint8_t get_display_brightness() {
+    return g_brightness;
+}
+
+void set_displays_on(bool on) {
+    if (on == g_displays_on) return;  // No change
+
+    g_displays_on = on;
+    g_display_manager.setDisplayOn(on);
+    g_freshness_bar.setDisplayOn(on);
+
+    if (!on) {
+        // Turn off all LEDs when displays are disabled
+        all_leds_off();
+    }
+    // When turning back on, LEDs will be restored by normal update cycle
+}
+
+bool get_displays_on() {
+    return g_displays_on;
+}
+
+void power_switch_init() {
+    // Configure MCP pin as input with pullup
+    g_mcp.pinMode(POWER_SWITCH_PIN, INPUT_PULLUP);
+
+    // Read initial state (switch closed = LOW = displays on)
+    g_power_switch_last_state = g_mcp.digitalRead(POWER_SWITCH_PIN) == LOW;
+    g_power_switch_last_change_ms = millis();
+    g_power_switch_enabled = true;
+
+    // Set initial display state to match switch
+    set_displays_on(g_power_switch_last_state);
+
+    Serial.printf("Power switch initialized on MCP pin %d, state: %s\n",
+                  POWER_SWITCH_PIN, g_power_switch_last_state ? "ON" : "OFF");
+}
+
+void power_switch_update() {
+    if (!g_power_switch_enabled) return;
+
+    unsigned long now = millis();
+
+    // Debounce: ignore reads too soon after last change
+    if (now - g_power_switch_last_change_ms < POWER_SWITCH_DEBOUNCE_MS) {
+        return;
+    }
+
+    // Read current state (switch closed = LOW = displays on)
+    bool current_state = g_mcp.digitalRead(POWER_SWITCH_PIN) == LOW;
+
+    // Detect state change
+    if (current_state != g_power_switch_last_state) {
+        g_power_switch_last_state = current_state;
+        g_power_switch_last_change_ms = now;
+
+        // Physical switch change overrides current state
+        set_displays_on(current_state);
+        Serial.printf("Power switch toggled: %s\n", current_state ? "ON" : "OFF");
+    }
+}
+
+bool get_power_switch_position() {
+    return g_power_switch_last_state;
+}
+
+uint8_t get_brightness_pot_level() {
+    return g_brightness_pot.getPotLevel();
 }

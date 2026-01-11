@@ -207,6 +207,22 @@ void DisplayManager::setDisplayMode(DisplayMode mode) {
     _config.mode = mode;
 }
 
+void DisplayManager::setBrightness(uint8_t brightness) {
+    for (int i = 0; i < MAX_DISPLAYS; i++) {
+        if (_displays[i].isReady()) {
+            _displays[i].setBrightness(brightness);
+        }
+    }
+}
+
+void DisplayManager::setDisplayOn(bool on) {
+    for (int i = 0; i < MAX_DISPLAYS; i++) {
+        if (_displays[i].isReady()) {
+            _displays[i].setDisplayOn(on);
+        }
+    }
+}
+
 bool DisplayManager::isPacketAutoCycleEnabled() const {
     return _packet_auto_cycle;
 }

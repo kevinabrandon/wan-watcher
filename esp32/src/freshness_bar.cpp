@@ -2,7 +2,9 @@
 #include "freshness_bar.h"
 
 FreshnessBar::FreshnessBar()
-    : _ready(false)
+    : _wire(nullptr)
+    , _i2c_addr(0)
+    , _ready(false)
     , _brightness(8)
     , _blink_on(false)
     , _last_blink_ms(0)
@@ -14,6 +16,8 @@ FreshnessBar::FreshnessBar()
 {}
 
 bool FreshnessBar::begin(uint8_t i2c_addr, TwoWire* wire) {
+    _i2c_addr = i2c_addr;
+    _wire = wire;
     _ready = _bar.begin(i2c_addr, wire);
     if (_ready) {
         _bar.clear();
@@ -43,6 +47,14 @@ void FreshnessBar::setBrightness(uint8_t brightness) {
     if (_ready) {
         _bar.setBrightness(_brightness);
     }
+}
+
+void FreshnessBar::setDisplayOn(bool on) {
+    if (!_ready || !_wire) return;
+    // HT16K33 display setup register: 0x80 = off, 0x81 = on
+    _wire->beginTransmission(_i2c_addr);
+    _wire->write(on ? 0x81 : 0x80);
+    _wire->endTransmission();
 }
 
 void FreshnessBar::clear() {

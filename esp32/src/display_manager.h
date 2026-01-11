@@ -28,6 +28,12 @@ public:
     DisplayMode displayMode() const;
     void setDisplayMode(DisplayMode mode);
 
+    // Brightness control (0-15)
+    void setBrightness(uint8_t brightness);
+
+    // Turn all displays on/off
+    void setDisplayOn(bool on);
+
     bool isPacketAutoCycleEnabled() const;
     bool isBandwidthAutoCycleEnabled() const;
     void setPacketAutoCycleEnabled(bool enabled);

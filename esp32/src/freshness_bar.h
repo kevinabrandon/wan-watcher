@@ -52,11 +52,16 @@ public:
     // Set brightness (0-15)
     void setBrightness(uint8_t brightness);
 
+    // Turn display on/off (uses HT16K33 display setup register)
+    void setDisplayOn(bool on);
+
     // Clear all LEDs
     void clear();
 
 private:
     Adafruit_24bargraph _bar;
+    TwoWire* _wire;
+    uint8_t _i2c_addr;
     bool _ready;
     uint8_t _brightness;
 

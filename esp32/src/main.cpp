@@ -212,6 +212,13 @@ void setup() {
     DisplaySystemConfig config = build_display_config();
     leds_init_with_displays(config);
 
+    // Initialize physical power switch (MCP pin 13)
+    power_switch_init();
+
+    // Initialize brightness potentiometer (GPIO 36 / VP)
+    // Mapping is inverted: low voltage = bright, high voltage = dim
+    g_brightness_pot.begin(36);
+
     // Block here until network is up; g_led_status1 shows progress
     // Tries Ethernet first, falls back to WiFi
     connect_to_network_blocking();
@@ -227,6 +234,8 @@ void setup() {
 
 void loop() {
     server.handleClient();
+    power_switch_update();
+    g_brightness_pot.update();
     router_heartbeat_check();
     freshness_bar_update();
     display_update();
