@@ -8,6 +8,7 @@
 #include "display_manager.h"
 #include "button_handler.h"
 #include "freshness_bar.h"
+#include "brightness_pot.h"
 
 // LED objects (defined in leds.cpp)
 extern Led g_led_wan1_up;
@@ -55,3 +56,20 @@ void freshness_bar_update();
 // 7-segment display update
 // Uses DisplayManager if active, otherwise legacy single display
 void display_update();
+
+// Brightness control (0-15) for all HT16K33 displays
+void set_display_brightness(uint8_t brightness);
+uint8_t get_display_brightness();
+
+// Display on/off control (uses HT16K33 display enable register)
+void set_displays_on(bool on);
+bool get_displays_on();
+
+// Physical power switch (toggle switch on MCP pin)
+void power_switch_init();   // Call after leds_init_with_displays()
+void power_switch_update(); // Call from loop()
+bool get_power_switch_position(); // Get physical switch state (true=on position)
+
+// Brightness potentiometer (analog input on GPIO)
+extern BrightnessPotentiometer g_brightness_pot;
+uint8_t get_brightness_pot_level(); // Get pot position as brightness level (0-15)

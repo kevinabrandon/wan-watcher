@@ -34,6 +34,12 @@ wan-watcher collects real-time WAN metrics from pfSense (latency, loss, jitter, 
     * Short press: advance to next metric
     * Long press: toggle auto-cycle mode
   * Auto-cycle enabled by default (5-second interval)
+  * Physical power switch (toggle switch on MCP pin 13):
+    * Turns all displays and LEDs on/off
+    * Web UI can override; physical switch toggle overrides back
+  * Brightness potentiometer (GPIO 36):
+    * Analog dial controls display brightness (0-15)
+    * Web UI slider can override; turning dial overrides back
 
 * **Web UI**
   * Live-updating metrics table (refreshes every 5 seconds without page reload)
@@ -47,6 +53,8 @@ wan-watcher collects real-time WAN metrics from pfSense (latency, loss, jitter, 
   * Click on displays to cycle metrics, auto-cycles every 5 seconds
   * Dynamic favicon color based on Local pinger state (green/yellow/red)
   * Local timezone display for timestamps
+  * Display power toggle (syncs with physical switch, shows override status)
+  * Brightness slider (0-15, syncs with potentiometer, shows override status)
 
 * **ESP32 local pinger**
 
@@ -91,9 +99,11 @@ wan-watcher collects real-time WAN metrics from pfSense (latency, loss, jitter, 
 | MCP 6 | MCP23017 | Local UP (green) |
 | MCP 7 | MCP23017 | Local DEGRADED (yellow) |
 | MCP 8 | MCP23017 | Local DOWN (red) |
+| MCP 13 | MCP23017 | Power switch (INPUT_PULLUP, active low) |
 | MCP 14 | MCP23017 | Packet display button (INPUT_PULLUP) |
 | MCP 15 | MCP23017 | Bandwidth display button (INPUT_PULLUP) |
 | GPIO 4 | ESP32 | WiFi status LED |
+| GPIO 36 | ESP32 | Brightness potentiometer (ADC1, analog input) |
 
 ### Display I2C Addresses
 
@@ -173,6 +183,10 @@ The ESP32 exposes a JSON API for metrics:
 **Endpoints:**
 - `POST /api/wans` - Batch update for all WANs (used by pfSense daemon)
 - `GET /api/status` - Get current metrics for all interfaces (used by Web UI)
+- `GET /api/display-power` - Get display/LED power state and physical switch position
+- `POST /api/display-power` - Set display/LED power state
+- `GET /api/brightness` - Get display brightness level and potentiometer position
+- `POST /api/brightness` - Set display brightness level (0-15)
 
 ### POST /api/wans
 
@@ -243,6 +257,62 @@ Returns current metrics for all interfaces. Used by the Web UI for live updates.
 }
 ```
 
+### GET /api/display-power
+
+Returns current display/LED power state and physical switch position.
+
+**Response format:**
+```json
+{
+  "on": true,
+  "switch_position": true
+}
+```
+
+- `on`: Current power state (software-controlled)
+- `switch_position`: Physical toggle switch position (true = ON)
+
+When `on` differs from `switch_position`, the web UI shows "(overridden)" to indicate the software state differs from the physical switch.
+
+### POST /api/display-power
+
+Set the display/LED power state (overrides physical switch until switch is toggled).
+
+**Payload format:**
+```json
+{
+  "on": true
+}
+```
+
+### GET /api/brightness
+
+Returns current brightness level and potentiometer position.
+
+**Response format:**
+```json
+{
+  "brightness": 8,
+  "pot_level": 10
+}
+```
+
+- `brightness`: Current display brightness (0-15, software-controlled)
+- `pot_level`: Physical potentiometer position (0-15)
+
+When `brightness` differs from `pot_level`, the web UI shows "(overridden)" to indicate the software setting differs from the dial position.
+
+### POST /api/brightness
+
+Set the display brightness (overrides potentiometer until dial is turned).
+
+**Payload format:**
+```json
+{
+  "brightness": 8
+}
+```
+
 ## Security Notes
 
 - Intended for a trusted VLAN
@@ -279,6 +349,8 @@ Returns current metrics for all interfaces. Used by the Web UI for live updates.
  - Multiple 7-segment displays (packet + bandwidth per WAN)
  - Auto-cycle enabled by default (5-second interval)
  - Displays show "----" when interface is DOWN
+ - Physical power switch (MCP pin 13) with web UI sync
+ - Brightness potentiometer (GPIO 36) with web UI sync
 
 #### ESP32 Web UI
 
@@ -289,6 +361,8 @@ Returns current metrics for all interfaces. Used by the Web UI for live updates.
  - Click-to-cycle and auto-cycle for display metrics
  - Dynamic favicon color based on Local pinger state
  - Local timezone display for timestamps
+ - Brightness slider with potentiometer sync and override indication
+ - Display power toggle with physical switch sync and override indication
 
 #### ESP32 Local Pinger
 
@@ -300,10 +374,8 @@ Returns current metrics for all interfaces. Used by the Web UI for live updates.
 
 ### Planned
 
-#### Display Controls
-
-* [ ] Brightness control (potentiometer or buttons)
-* [ ] Display on/off toggle for "dark mode" (guest sleeping)
+* [ ] Replace 9 discrete LEDs (3×3 matrix of green/yellow/red) with 3 bicolor green/red LEDs
+* [ ] Build into custom panel enclosure, document with photos
 
 ---
 

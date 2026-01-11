@@ -27,7 +27,9 @@ static const uint8_t LETTER_U = SEG_B | SEG_C | SEG_D | SEG_E | SEG_F;      // U
 static const uint8_t LETTER_DASH = SEG_G;                                    // -
 
 MetricDisplay::MetricDisplay()
-    : _ready(false)
+    : _wire(nullptr)
+    , _i2c_addr(0)
+    , _ready(false)
     , _type(DisplayType::PACKET)
     , _wan_id(1)
     , _packet_metric(PacketMetric::LATENCY)
@@ -35,6 +37,8 @@ MetricDisplay::MetricDisplay()
 {}
 
 bool MetricDisplay::begin(uint8_t i2c_addr, TwoWire* wire) {
+    _i2c_addr = i2c_addr;
+    _wire = wire;
     _ready = _display.begin(i2c_addr, wire);
     if (_ready) {
         _display.clear();
@@ -57,6 +61,14 @@ void MetricDisplay::setBrightness(uint8_t brightness) {
     if (_ready) {
         _display.setBrightness(brightness > 15 ? 15 : brightness);
     }
+}
+
+void MetricDisplay::setDisplayOn(bool on) {
+    if (!_ready || !_wire) return;
+    // HT16K33 display setup register: 0x80 = off, 0x81 = on
+    _wire->beginTransmission(_i2c_addr);
+    _wire->write(on ? 0x81 : 0x80);
+    _wire->endTransmission();
 }
 
 void MetricDisplay::setPacketMetric(PacketMetric metric) {
