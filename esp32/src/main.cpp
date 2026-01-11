@@ -228,6 +228,7 @@ void setup() {
 void loop() {
     server.handleClient();
     router_heartbeat_check();
+    freshness_bar_update();
     display_update();
 
     // Update local pinger and its LEDs

@@ -21,11 +21,11 @@ wan-watcher collects real-time WAN metrics from pfSense (latency, loss, jitter, 
 * **ESP32 indicator panel**
   * Receives metrics via JSON API (`POST /api/wans` batch endpoint)
   * LED indicators for WAN1, WAN2, and Local state (UP / DEGRADED / DOWN) via MCP23017 I2C expander
-  * Heartbeat LED showing how recent the last pfSense update was:
-    * `< 15s`: OFF
-    * `15–30s`: slow blink
-    * `30–45s`: medium blink
-    * `> 45s`: fast blink + all WANs forced DOWN
+  * 24-segment bicolor LED bargraph showing data freshness:
+    * 0–15s: green bar fills (fresh data)
+    * 20–35s: yellow overwrites green (getting stale)
+    * 40–55s: red overwrites yellow (stale)
+    * >60s: full red bar blinking + all WANs forced DOWN with blinking LEDs
   * Dual 7-segment displays per WAN:
     * **Packet display**: Shows latency (L), jitter (J), or packet loss (P)
     * **Bandwidth display**: Shows download (d) or upload (U) in Mbps
@@ -39,11 +39,11 @@ wan-watcher collects real-time WAN metrics from pfSense (latency, loss, jitter, 
   * Live-updating metrics table (refreshes every 5 seconds without page reload)
   * CSS-based 7-segment display panel mimicking the physical hardware layout
   * Virtual state LEDs (UP/DEGRADED/DOWN) for each interface
-  * Freshness indicator bar showing time since last pfSense update:
-    * 0–15s: green bar fills (normal)
-    * 15–30s: yellow bar fills (late)
-    * 30–45s: red bar fills (very late)
-    * >45s: full red bar blinking (stale)
+  * Freshness indicator bar (24 discrete LEDs matching hardware):
+    * 0–15s: green bar fills (fresh data)
+    * 20–35s: yellow overwrites green (getting stale)
+    * 40–55s: red overwrites yellow (stale)
+    * >60s: full red bar blinking, displays show "----", WAN LEDs blink red
   * Click on displays to cycle metrics, auto-cycles every 5 seconds
   * Dynamic favicon color based on Local pinger state (green/yellow/red)
   * Local timezone display for timestamps
@@ -59,7 +59,7 @@ wan-watcher collects real-time WAN metrics from pfSense (latency, loss, jitter, 
 
 ## Failure Behavior
 
-- If pfSense stops reporting: all WANs forced DOWN after 45 seconds; 7-segment displays read "----" (local pinger continues updating independently)
+- If pfSense stops reporting: after 60 seconds, all WAN LEDs blink red, 7-segment displays read "----", freshness bar blinks red (local pinger continues updating independently)
 - If ESP32 loses Wi-Fi: status LED blinks, last state retained
 
 ## Hardware
@@ -67,6 +67,7 @@ wan-watcher collects real-time WAN metrics from pfSense (latency, loss, jitter, 
 * 1× Olimex ESP32-POE-ISO
 * 1× MCP23017 I2C GPIO expander (address 0x20)
 * 5× Adafruit 4-digit 7-segment displays (HT16K33, addresses 0x71-0x75)
+* 1× Adafruit Bicolor 24-Bar Bargraph w/I2C Backpack (HT16K33, address 0x70)
 * 2× Momentary push buttons (active low, directly to MCP23017 with internal pull-ups)
 * Panel-mount LEDs for WAN status indicators
 
@@ -93,12 +94,12 @@ wan-watcher collects real-time WAN metrics from pfSense (latency, loss, jitter, 
 | MCP 14 | MCP23017 | Packet display button (INPUT_PULLUP) |
 | MCP 15 | MCP23017 | Bandwidth display button (INPUT_PULLUP) |
 | GPIO 4 | ESP32 | WiFi status LED |
-| GPIO 5 | ESP32 | Heartbeat LED |
 
 ### Display I2C Addresses
 
 | Address | Display |
 |---------|---------|
+| 0x70 | Freshness Bar (24-segment bicolor) |
 | 0x71 | WAN1 Packet (L/J/P) |
 | 0x72 | WAN1 Bandwidth (d/U) |
 | 0x73 | WAN2 Packet (L/J/P) |
@@ -268,8 +269,8 @@ Returns current metrics for all interfaces. Used by the Web UI for live updates.
  - Static hostname (`wan-watcher`) + mDNS support
  - HTTP server + routes
  - WAN1 and WAN2 LED state machines (UP / DEGRADED / DOWN)
- - Heartbeat LED (off / slow / medium / fast blink)
- - Auto-timeout all WANs to DOWN if no update for 45 seconds
+ - 24-segment bicolor LED bargraph for data freshness (green→yellow→red fill, blinks when stale)
+ - Auto-timeout all WANs to DOWN with blinking LEDs after 60 seconds of no updates
  - MCP23017 GPIO expander for LED control
  - LED abstraction class (supports GPIO and MCP23017 pins)
  - Multi-WAN support (2 WANs with 2 displays each)
@@ -284,7 +285,7 @@ Returns current metrics for all interfaces. Used by the Web UI for live updates.
  - Live-updating metrics table (every 5 seconds, no page reload)
  - CSS-based 7-segment display panel mimicking hardware layout
  - Virtual state LEDs (UP/DEGRADED/DOWN) for each interface
- - Freshness indicator bar (green/yellow/red based on data age)
+ - Freshness indicator bar (24 discrete LEDs matching hardware, green→yellow→red fill)
  - Click-to-cycle and auto-cycle for display metrics
  - Dynamic favicon color based on Local pinger state
  - Local timezone display for timestamps
@@ -304,15 +305,6 @@ Returns current metrics for all interfaces. Used by the Web UI for live updates.
 * [ ] Brightness control (potentiometer or buttons)
 * [ ] Display on/off toggle for "dark mode" (guest sleeping)
 
-#### Hardware Visual Freshness Indicator
-
-* [ ] I2C bicolor LED bargraph (HT16K33) for update freshness
-  * 24-segment progress bar driven from the shared I²C bus
-  * Acts as a visual timer showing time since last pfSense update
-* [ ] Time-based fill with color stages (same as Web UI freshness bar)
-  * >45s: full red bar blinking (stale / fault)
-* [ ] Immediate reset on update receipt
-  * Bar clears instantly when a valid update is received
 ---
 
 ## License
