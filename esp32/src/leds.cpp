@@ -139,26 +139,50 @@ void local_pinger_set_leds(WanState state) {
     }
 }
 
+// Helper to turn off all WAN LEDs (used during blink-off phase)
+static void wan_leds_all_off() {
+    g_led_wan1_up.set(false);
+    g_led_wan1_degraded.set(false);
+    g_led_wan1_down.set(false);
+    g_led_wan2_up.set(false);
+    g_led_wan2_degraded.set(false);
+    g_led_wan2_down.set(false);
+}
+
 void router_heartbeat_check() {
     const WanMetrics& m = wan_metrics_get(1);
+    bool is_stale = false;
 
     if (m.last_update_ms == 0) {
-        // Never received an update - nothing to timeout yet
-        return;
+        // Never received an update - treat as stale
+        is_stale = true;
+    } else {
+        unsigned long elapsed = millis() - m.last_update_ms;
+        is_stale = (elapsed > FRESHNESS_RED_BUFFER_END_MS);
     }
 
-    unsigned long elapsed = millis() - m.last_update_ms;
-
-    // Timeout at 60s (matches freshness bar red buffer end) → force all WANs DOWN
-    if (elapsed > FRESHNESS_RED_BUFFER_END_MS) {
+    if (is_stale) {
+        // Log once when entering stale state
         if (!g_router_timed_out) {
             g_router_timed_out = true;
-            Serial.println("Router timeout -> forcing all WANs DOWN");
-            wan1_set_leds(WanState::DOWN);
-            wan2_set_leds(WanState::DOWN);
+            Serial.println("Router timeout -> blinking WANs DOWN");
+        }
+
+        // Sync WAN LED blinking with freshness bar
+        if (g_freshness_bar.isBlinkOn()) {
+            // Blink on: show DOWN state (red LEDs)
+            g_led_wan1_down.set(true);
+            g_led_wan1_up.set(false);
+            g_led_wan1_degraded.set(false);
+            g_led_wan2_down.set(true);
+            g_led_wan2_up.set(false);
+            g_led_wan2_degraded.set(false);
+        } else {
+            // Blink off: all LEDs off
+            wan_leds_all_off();
         }
     } else {
-        // Reset timeout flag when we get updates
+        // Reset timeout flag when we have fresh data
         g_router_timed_out = false;
     }
 }

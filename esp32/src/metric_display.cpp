@@ -2,6 +2,7 @@
 #include "metric_display.h"
 #include "wan_metrics.h"
 #include "local_pinger.h"
+#include "freshness_bar.h"
 
 // 7-segment patterns for letters (active-low segments: 0bPGFEDCBA)
 // Segment layout:
@@ -122,8 +123,7 @@ void MetricDisplay::write3DigitValue(int value) {
     }
 }
 
-// Timeout threshold for stale data (same as heartbeat: 3 minutes)
-static const unsigned long STALE_DATA_TIMEOUT_MS = 3UL * 60UL * 1000UL;
+// Timeout threshold uses FRESHNESS_RED_BUFFER_END_MS from freshness_bar.h (60s)
 
 void MetricDisplay::render(DisplayMode mode) {
     if (!_ready) return;
@@ -145,9 +145,9 @@ void MetricDisplay::render(DisplayMode mode) {
         return;
     }
 
-    // Show dashes if data is stale (no update for 3 minutes)
+    // Show dashes if data is stale (no update for 60s - matches freshness bar)
     unsigned long elapsed = millis() - last_update_ms;
-    if (elapsed > STALE_DATA_TIMEOUT_MS) {
+    if (elapsed > FRESHNESS_RED_BUFFER_END_MS) {
         showDashes();
         _display.writeDisplay();
         return;

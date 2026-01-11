@@ -238,6 +238,7 @@ static String root_page_html() {
     .state-led.green { background: #2ecc71; box-shadow: 0 0 8px #2ecc71; }
     .state-led.yellow { background: #f1c40f; box-shadow: 0 0 8px #f1c40f; }
     .state-led.red { background: #e74c3c; box-shadow: 0 0 8px #e74c3c; }
+    .state-led.blink-red { background: #e74c3c; box-shadow: 0 0 8px #e74c3c; animation: led-blink 0.5s infinite; }
     .digit { position: relative; width: 28px; height: 50px; margin: 0 2px; }
     .seg { position: absolute; background: #222; border-radius: 2px; }
     .seg.on { background: #f00; box-shadow: 0 0 6px #f00; }
@@ -488,36 +489,54 @@ static String root_page_html() {
   var pktIdx=0,bwIdx=0;
   var P=document.getElementById('seg-panel').dataset;
 
+  // === Stale state helper ===
+  function isStale(){
+    if(!updateTime)return true;
+    var elapsed=(Date.now()-updateTime.getTime())/1000;
+    return elapsed>=F.redBufferEnd;
+  }
+
   // === State LED update ===
-  function setLeds(prefix,state){
+  function setLeds(prefix,state,stale){
     var $=function(id){return document.getElementById(id);};
     var up=$(prefix+'-led-up'),deg=$(prefix+'-led-deg'),dn=$(prefix+'-led-down');
-    up.className='state-led '+(state==='up'?'green':'off');
-    deg.className='state-led '+(state==='degraded'?'yellow':'off');
-    dn.className='state-led '+(state==='down'?'red':'off');
+    if(stale){
+      // When stale, blink down LED using CSS animation
+      up.className='state-led off';
+      deg.className='state-led off';
+      dn.className='state-led blink-red';
+    }else{
+      up.className='state-led '+(state==='up'?'green':'off');
+      deg.className='state-led '+(state==='degraded'?'yellow':'off');
+      dn.className='state-led '+(state==='down'?'red':'off');
+    }
   }
   function updLeds(){
-    setLeds('w1',P.w1State);
-    setLeds('w2',P.w2State);
-    setLeds('lp',P.lpState);
+    var stale=isStale();
+    setLeds('w1',P.w1State,stale);
+    setLeds('w2',P.w2State,stale);
+    setLeds('lp',P.lpState,false);  // Local pinger doesn't depend on pfSense freshness
   }
   updLeds();
 
   function updDisp(){
     var pktM=['L','J','P'],bwM=['d','U'];
     var pm=pktM[pktIdx],bm=bwM[bwIdx];
-    if(P.w1State==='down'){
+    var stale=isStale();
+    // Show dashes when stale or when WAN is down
+    if(stale||P.w1State==='down'){
       setDisplayDashes('w1-pkt');setDisplayDashes('w1-bw');
     }else{
       setDisplay('w1-pkt',pm,[P.w1Lat,P.w1Jit,P.w1Loss][pktIdx]);
       setDisplay('w1-bw',bm,[P.w1Down,P.w1Up][bwIdx]);
     }
-    if(P.w2State==='down'){
+    if(stale||P.w2State==='down'){
       setDisplayDashes('w2-pkt');setDisplayDashes('w2-bw');
     }else{
       setDisplay('w2-pkt',pm,[P.w2Lat,P.w2Jit,P.w2Loss][pktIdx]);
       setDisplay('w2-bw',bm,[P.w2Down,P.w2Up][bwIdx]);
     }
+    // Local pinger doesn't depend on pfSense freshness
     if(P.lpState==='down'){
       setDisplayDashes('lp-pkt');
     }else{
@@ -545,9 +564,9 @@ static String root_page_html() {
     fetch('/api/status').then(function(r){return r.json();}).then(function(d){
       // Update 7-segment data
       P.w1State=d.wan1.state;P.w1Lat=d.wan1.latency_ms;P.w1Jit=d.wan1.jitter_ms;P.w1Loss=d.wan1.loss_pct;
-      P.w1Down=d.wan1.down_mbps;P.w1Up=d.wan1.up_mbps;
+      P.w1Down=d.wan1.down_mbps.toFixed(1);P.w1Up=d.wan1.up_mbps.toFixed(1);
       P.w2State=d.wan2.state;P.w2Lat=d.wan2.latency_ms;P.w2Jit=d.wan2.jitter_ms;P.w2Loss=d.wan2.loss_pct;
-      P.w2Down=d.wan2.down_mbps;P.w2Up=d.wan2.up_mbps;
+      P.w2Down=d.wan2.down_mbps.toFixed(1);P.w2Up=d.wan2.up_mbps.toFixed(1);
       P.lpState=d.local.state;P.lpLat=d.local.latency_ms;P.lpJit=d.local.jitter_ms;P.lpLoss=d.local.loss_pct;
       updLeds();
       updDisp();

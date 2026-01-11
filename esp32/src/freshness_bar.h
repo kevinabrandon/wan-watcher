@@ -40,6 +40,12 @@ public:
     // Check if bargraph initialized successfully
     bool isReady() const;
 
+    // Check if currently in blinking stale state
+    bool isBlinking() const;
+
+    // Get current blink phase (true = LEDs on, false = LEDs off)
+    bool isBlinkOn() const;
+
     // Update the bargraph based on elapsed time since last pfSense update
     void update(unsigned long elapsed_ms, bool never_updated);
 

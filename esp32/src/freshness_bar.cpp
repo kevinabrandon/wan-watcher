@@ -30,6 +30,14 @@ bool FreshnessBar::isReady() const {
     return _ready;
 }
 
+bool FreshnessBar::isBlinking() const {
+    return _last_was_blinking;
+}
+
+bool FreshnessBar::isBlinkOn() const {
+    return _blink_on;
+}
+
 void FreshnessBar::setBrightness(uint8_t brightness) {
     _brightness = (brightness > 15) ? 15 : brightness;
     if (_ready) {
@@ -50,19 +58,10 @@ void FreshnessBar::clear() {
 void FreshnessBar::update(unsigned long elapsed_ms, bool never_updated) {
     if (!_ready) return;
 
-    // If never updated, show empty bar
-    if (never_updated) {
-        if (stateChanged(0, 0, 0, false, false)) {
-            clear();
-            cacheState(0, 0, 0, false, false);
-        }
-        return;
-    }
-
     unsigned long now = millis();
 
-    // >60s: Full bar blinking red
-    if (elapsed_ms >= FRESHNESS_RED_BUFFER_END_MS) {
+    // Never updated or >60s stale: Full bar blinking red
+    if (never_updated || elapsed_ms >= FRESHNESS_RED_BUFFER_END_MS) {
         // Check if we should toggle blink state
         if (now - _last_blink_ms >= FRESHNESS_BLINK_INTERVAL_MS) {
             _last_blink_ms = now;
