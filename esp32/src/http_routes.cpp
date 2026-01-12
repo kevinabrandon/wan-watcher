@@ -1,7 +1,7 @@
 // http_routes.cpp
 #include <Arduino.h>
 #include <WebServer.h>
-#include <WiFi.h>
+#include <ETH.h>
 #include <ArduinoJson.h>
 #include "http_routes.h"
 #include "hostname.h"

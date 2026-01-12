@@ -68,7 +68,7 @@ wan-watcher collects real-time WAN metrics from pfSense (latency, loss, jitter, 
 ## Failure Behavior
 
 - If pfSense stops reporting: after 60 seconds, all WAN LEDs blink red, 7-segment displays read "----", freshness bar blinks red (local pinger continues updating independently)
-- If ESP32 loses Wi-Fi: status LED blinks, last state retained
+- If ESP32 loses Ethernet: status LED blinks, last state retained
 
 ## Hardware
 
@@ -102,7 +102,7 @@ wan-watcher collects real-time WAN metrics from pfSense (latency, loss, jitter, 
 | MCP 13 | MCP23017 | Power switch (INPUT_PULLUP, active low) |
 | MCP 14 | MCP23017 | Packet display button (INPUT_PULLUP) |
 | MCP 15 | MCP23017 | Bandwidth display button (INPUT_PULLUP) |
-| GPIO 4 | ESP32 | WiFi status LED |
+| GPIO 4 | ESP32 | Ethernet status LED |
 | GPIO 36 | ESP32 | Brightness potentiometer (ADC1, analog input) |
 
 ### Display I2C Addresses
@@ -128,23 +128,11 @@ wan-watcher/
 
 ---
 
-## ESP32 Wi-Fi Configuration
+## ESP32 Network Configuration
 
-Inside `esp32/src/`, you will find:
+The ESP32 connects via Ethernet using the Olimex ESP32-POE-ISO's built-in LAN8720 PHY.
 
-```
-wifi_config.h.example
-```
-
-Copy it to `wifi_config.h` and edit your SSID/password:
-
-```
-cp esp32/src/wifi_config.h.example esp32/src/wifi_config.h
-```
-
-`wifi_config.h` is intentionally **ignored by git** and should never be committed.
-
-The ESP32 uses the hostname `wan-watcher` and exposes itself via mDNS (Bonjour/Avahi):
+The device uses the hostname `wan-watcher` and exposes itself via mDNS (Bonjour/Avahi):
 
 ```
 http://wan-watcher.local/
@@ -335,7 +323,7 @@ Set the display brightness (overrides potentiometer until dial is turned).
 
 #### ESP32 Side
 
- - Wi-Fi + Ethernet support with status LED
+ - Ethernet connection with status LED
  - Static hostname (`wan-watcher`) + mDNS support
  - HTTP server + routes
  - WAN1 and WAN2 LED state machines (UP / DEGRADED / DOWN)

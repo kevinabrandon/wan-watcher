@@ -2,7 +2,6 @@
 // ESP32-based ICMP pinger implementation using ESP-IDF ping API
 
 #include "local_pinger.h"
-#include <WiFi.h>
 #include "ping/ping_sock.h"
 #include "lwip/inet.h"
 #include "lwip/netdb.h"
@@ -69,8 +68,6 @@ void local_pinger_init() {
 
 void local_pinger_update() {
     if (!g_initialized) return;
-    // Note: When using Ethernet, WiFi.status() won't be WL_CONNECTED
-    // The ping API works with any network interface via LwIP
 
     unsigned long now = millis();
 

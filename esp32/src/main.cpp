@@ -1,12 +1,9 @@
 // main.cpp
 #include <Arduino.h>
-#include <WiFi.h>
-#include <esp_wifi.h>
 #include <ETH.h>
 #include <WebServer.h>
 #include <ESPmDNS.h>
 
-#include "wifi_config.h"
 #include "hostname.h"
 #include "leds.h"
 #include "http_routes.h"
@@ -26,26 +23,16 @@ WebServer server(80);
 
 // Connection state
 static bool g_eth_connected = false;
-static bool g_wifi_connected = false;
 
 // Network interface helpers (declared in hostname.h)
 bool is_eth_connected() { return g_eth_connected; }
-bool is_wifi_connected() { return g_wifi_connected; }
 
 String get_network_ip() {
-    if (g_eth_connected) {
-        return ETH.localIP().toString();
-    }
-    return WiFi.localIP().toString();
+    return ETH.localIP().toString();
 }
 
 String get_network_hostname() {
-    // Both interfaces use the same hostname from build_hostname()
-    // but we need to query the active interface
-    if (g_eth_connected) {
-        return String(ETH.getHostname());
-    }
-    return String(WiFi.getHostname());
+    return String(ETH.getHostname());
 }
 
 // Display system configuration
@@ -118,85 +105,26 @@ static void eth_event(WiFiEvent_t event) {
     }
 }
 
-// Try to connect via Ethernet, returns true if successful
-static bool try_ethernet(int timeout_ms) {
-    Serial.println("Trying Ethernet connection...");
-
-    WiFi.onEvent(eth_event);
-    ETH.begin(ETH_ADDR, ETH_POWER_PIN, ETH_MDC_PIN, ETH_MDIO_PIN, ETH_TYPE, ETH_CLK_MODE);
-
-    unsigned long start = millis();
-    while (!g_eth_connected && (millis() - start < (unsigned long)timeout_ms)) {
-        delay(100);
-        g_led_status1.set(!g_led_status1.state());
-    }
-
-    return g_eth_connected;
-}
-
-// Try to connect via WiFi, returns true if successful
-static bool try_wifi(int timeout_ms) {
-    String hostname = build_hostname();
-    Serial.printf("Trying WiFi connection to %s...\n", WIFI_SSID);
-
-    WiFi.mode(WIFI_STA);
-    WiFi.setHostname(hostname.c_str());
-    WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
-
-    unsigned long start = millis();
-    while (WiFi.status() != WL_CONNECTED && (millis() - start < (unsigned long)timeout_ms)) {
-        delay(100);
-        g_led_status1.set(!g_led_status1.state());
-    }
-
-    if (WiFi.status() == WL_CONNECTED) {
-        g_wifi_connected = true;
-        // Disable WiFi power saving for lower latency
-        esp_wifi_set_ps(WIFI_PS_NONE);
-        return true;
-    }
-
-    return false;
-}
-
-// Connect to network: try Ethernet first, fall back to WiFi
-static void connect_to_network_blocking() {
+// Connect to Ethernet, blocking until connected
+static void connect_ethernet_blocking() {
     g_led_status1.set(false);
 
     String hostname = build_hostname();
     Serial.printf("Hostname: %s\n", hostname.c_str());
+    Serial.println("Connecting via Ethernet...");
 
-    // Try Ethernet first (5 second timeout)
-    if (try_ethernet(5000)) {
-        Serial.println("Connected via Ethernet");
-        g_led_status1.set(true);
-        start_mdns(hostname.c_str());
-        return;
+    WiFi.onEvent(eth_event);
+    ETH.begin(ETH_ADDR, ETH_POWER_PIN, ETH_MDC_PIN, ETH_MDIO_PIN, ETH_TYPE, ETH_CLK_MODE);
+
+    // Wait for connection, blinking status LED
+    while (!g_eth_connected) {
+        delay(100);
+        g_led_status1.set(!g_led_status1.state());
     }
 
-    Serial.println("Ethernet not connected, trying WiFi...");
-
-    // Fall back to WiFi with retry loop
-    for (;;) {
-        if (try_wifi(30000)) {
-            Serial.println("WiFi connected");
-            Serial.print("IP address: ");
-            Serial.println(WiFi.localIP());
-            Serial.printf("RSSI: %d dBm\n", WiFi.RSSI());
-            g_led_status1.set(true);
-            start_mdns(hostname.c_str());
-            return;
-        }
-
-        Serial.println("WiFi connect FAILED, retrying...");
-        WiFi.disconnect(true);
-
-        // Fast blink to indicate error
-        for (int i = 0; i < 6; ++i) {
-            g_led_status1.set(!g_led_status1.state());
-            delay(250);
-        }
-    }
+    Serial.println("Ethernet connected");
+    g_led_status1.set(true);
+    start_mdns(hostname.c_str());
 }
 
 void setup() {
@@ -216,23 +144,34 @@ void setup() {
     power_switch_init();
 
     // Initialize brightness potentiometer (GPIO 36 / VP)
-    // Mapping is inverted: low voltage = bright, high voltage = dim
     g_brightness_pot.begin(36);
 
-    // Block here until network is up; g_led_status1 shows progress
-    // Tries Ethernet first, falls back to WiFi
-    connect_to_network_blocking();
+    // Block here until Ethernet is up; g_led_status1 shows progress
+    connect_ethernet_blocking();
 
-    // Only now that WiFi is up, start HTTP server and routes
+    // Start HTTP server and routes
     setup_routes(server);
     server.begin();
     Serial.println("HTTP server started");
 
-    // Initialize local pinger (needs WiFi to be up)
+    // Initialize local pinger (needs network to be up)
     local_pinger_init();
 }
 
 void loop() {
+    // Handle Ethernet status LED
+    // Blinks when disconnected (overrides display power switch)
+    // Solid when connected (respects display power switch)
+    static unsigned long last_eth_blink_ms = 0;
+    if (!g_eth_connected) {
+        if (millis() - last_eth_blink_ms >= 100) {
+            last_eth_blink_ms = millis();
+            g_led_status1.set(!g_led_status1.state());
+        }
+    } else {
+        g_led_status1.set(get_displays_on());
+    }
+
     server.handleClient();
     power_switch_update();
     g_brightness_pot.update();
