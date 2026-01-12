@@ -25,7 +25,7 @@ wan-watcher collects real-time WAN metrics from pfSense (latency, loss, jitter, 
     * 0–15s: green bar fills (fresh data)
     * 20–35s: yellow overwrites green (getting stale)
     * 40–55s: red overwrites yellow (stale)
-    * >60s: full red bar blinking + all WANs forced DOWN with blinking LEDs
+    * 60s+: full red bar blinking + all WANs forced DOWN with blinking LEDs
   * Dual 7-segment displays per WAN:
     * **Packet display**: Shows latency (L), jitter (J), or packet loss (P)
     * **Bandwidth display**: Shows download (d) or upload (U) in Mbps
@@ -49,7 +49,7 @@ wan-watcher collects real-time WAN metrics from pfSense (latency, loss, jitter, 
     * 0–15s: green bar fills (fresh data)
     * 20–35s: yellow overwrites green (getting stale)
     * 40–55s: red overwrites yellow (stale)
-    * >60s: full red bar blinking, displays show "----", WAN LEDs blink red
+    * 60s+: full red bar blinking, displays show "----", WAN LEDs blink red
   * Click on displays to cycle metrics, auto-cycles every 5 seconds
   * Dynamic favicon color based on Local pinger state (green/yellow/red)
   * Local timezone display for timestamps
@@ -144,22 +144,58 @@ Your OS must support mDNS for this to work (macOS: built-in, Linux: Avahi, Windo
 
 ## Installation (pfSense)
 
-1. Copy the daemon to `/usr/local/bin`:
-```
+### 1. Install the daemon
+
+```sh
 cp pf/wan_watcher_daemon.sh /usr/local/bin/
 chmod +x /usr/local/bin/wan_watcher_daemon.sh
 ```
 
-2. Edit the `ESP32_HOST` variable in the script to match your ESP32's IP address.
+### 2. Install Shellcmd
 
-3. Run the daemon (default interval is 15 seconds):
-```
-/usr/local/bin/wan_watcher_daemon.sh &
+pfSense Web UI:
+
+* **System → Package Manager → Available Packages**
+* Install **Shellcmd**
+
+### 3. Add a startup entry
+
+pfSense Web UI:
+
+* **Services → Shellcmd → Add**
+
+Set:
+
+* **Command:**
+
+  ```sh
+  /usr/sbin/daemon -f -p /var/run/wan_watcher.pid sh -c '/usr/local/bin/wan_watcher_daemon.sh >> /var/log/wan_watcher.log 2>&1'
+  ```
+* **Type:** `shellcmd`
+
+Save.
+
+### 4. Start it now (optional)
+
+Shellcmd runs at boot. To start without rebooting:
+
+```sh
+/usr/sbin/daemon -f -p /var/run/wan_watcher.pid sh -c '/usr/local/bin/wan_watcher_daemon.sh >> /var/log/wan_watcher.log 2>&1'
 ```
 
-Or with a custom interval:
+### 5. Verify
+
+```sh
+cat /var/run/wan_watcher.pid
+ps -p $(cat /var/run/wan_watcher.pid)
+tail -f /var/log/wan_watcher.log
 ```
-/usr/local/bin/wan_watcher_daemon.sh 30 &
+
+#### Stop / restart
+
+```sh
+kill "$(cat /var/run/wan_watcher.pid)"
+/usr/sbin/daemon -f -p /var/run/wan_watcher.pid sh -c '/usr/local/bin/wan_watcher_daemon.sh >> /var/log/wan_watcher.log 2>&1'
 ```
 
 ---
