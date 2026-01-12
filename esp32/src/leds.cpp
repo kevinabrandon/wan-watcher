@@ -401,8 +401,16 @@ void set_displays_on(bool on) {
     if (!on) {
         // Turn off all LEDs when displays are disabled
         all_leds_off();
+    } else {
+        // Restore WAN LED states from current metrics
+        const WanMetrics& m1 = wan_metrics_get(1);
+        const WanMetrics& m2 = wan_metrics_get(2);
+        wan1_set_leds(m1.state);
+        wan2_set_leds(m2.state);
+        // Local pinger LEDs are restored by the normal loop() update cycle
+        // Restore status LED (indicates network connection)
+        g_led_status1.set(true);
     }
-    // When turning back on, LEDs will be restored by normal update cycle
 }
 
 bool get_displays_on() {
