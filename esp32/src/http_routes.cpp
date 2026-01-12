@@ -208,8 +208,6 @@ static String root_page_html() {
       border-radius: 4px;
       overflow: hidden;
       background: #222;
-      grid-column: 2 / 5;
-      margin-top: 12px;
       gap: 2px;
       padding: 2px;
     }
@@ -226,15 +224,43 @@ static String root_page_html() {
     .freshness-bar.blink .freshness-led.red { animation: led-blink 0.5s infinite; }
     @keyframes led-blink { 50% { background: #333; box-shadow: none; } }
     /* 7-segment display panel */
-    .display-panel { background: #fff; padding: 1rem; border-radius: 8px; margin: 1rem 0; display: inline-block; border: 1px solid #ccc; }
-    .display-grid { display: grid; grid-template-columns: 50px repeat(3, 1fr); gap: 8px; align-items: center; }
-    .display-grid .row-label { color: #333; font-size: 0.8em; font-weight: bold; text-align: right; padding-right: 8px; }
-    .display-grid .col-header { color: #333; font-size: 0.9em; font-weight: bold; text-align: center; }
+    .display-panel { background: #c8c8a4; padding: 1rem; border-radius: 8px; margin: 1rem 0; display: inline-block; border: 2px solid #444; }
+    .display-grid { display: grid; grid-template-columns: auto auto auto auto; gap: 25px 25px; align-items: center; }
+    .display-grid .row-label { color: #999; font-size: 0.9em; font-weight: bold; text-align: right; padding-right: 8px; }
+    .display-grid .col-header { color: #666; font-size: 0.8em; font-weight: bold; text-align: center; }
     .seg-display { display: inline-flex; background: #111; padding: 8px 12px; border-radius: 6px; cursor: pointer; justify-self: center; }
+    /* Top control row */
+    .control-row { display: flex; align-items: left; gap: 16px; margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid #444; }
+    .power-toggle-panel { display: flex; align-items: center; gap: 8px; }
+    .power-toggle-panel label { color: #999; font-size: 0.8em; }
+    .brightness-panel { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+    .brightness-panel span { color: #999; font-size: 0.8em; min-width: 1.5em; }
+    .dial-knob {
+      width: 36px; height: 36px;
+      background: linear-gradient(145deg, #3a3a3a, #252525);
+      border-radius: 50%;
+      border: 2px solid #555;
+      position: relative;
+      cursor: pointer;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255,255,255,0.1);
+    }
+    .dial-knob::after {
+      content: '';
+      position: absolute;
+      top: 4px; left: 50%;
+      width: 3px; height: 10px;
+      background: #ddd;
+      border-radius: 2px;
+      transform: translateX(-50%);
+      box-shadow: 0 0 3px rgba(255,255,255,0.3);
+    }
+    .dial-knob:hover { border-color: #777; }
+    .dial-knob:active { box-shadow: 0 1px 2px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255,255,255,0.1); }
+    .freshness-bar { width: 180px; flex-shrink: 0; }
     /* State LEDs */
-    .led-row { display: flex; justify-content: center; gap: 8px; padding: 8px 0; }
-    .state-led { width: 18px; height: 18px; border-radius: 50%; border: 1px solid #333; }
-    .state-led.off { background: #444; }
+    .led-group { display: flex; justify-content: center; gap: 6px; }
+    .state-led { width: 16px; height: 16px; border-radius: 50%; border: 1px solid #555; }
+    .state-led.off { background: #333; }
     .state-led.green { background: #2ecc71; box-shadow: 0 0 8px #2ecc71; }
     .state-led.yellow { background: #f1c40f; box-shadow: 0 0 8px #f1c40f; }
     .state-led.red { background: #e74c3c; box-shadow: 0 0 8px #e74c3c; }
@@ -253,18 +279,11 @@ static String root_page_html() {
     .seg-c { right: 0; top: 25px; }
     .seg-dp { position: absolute; width: 5px; height: 5px; right: -3px; bottom: 2px; border-radius: 50%; background: #222; }
     .seg-dp.on { background: #f00; box-shadow: 0 0 6px #f00; }
-    .display-controls { margin-top: 1rem; display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
-    .brightness-control { display: flex; align-items: center; gap: 0.5rem; }
-    .brightness-control label { font-weight: bold; }
-    .brightness-control input[type="range"] { width: 200px; }
-    .brightness-control span { min-width: 2em; text-align: center; }
-    .power-toggle { display: flex; align-items: center; gap: 0.5rem; }
-    .power-toggle label { font-weight: bold; }
-    .toggle-btn { padding: 0.3rem 0.8rem; border: 1px solid #333; border-radius: 4px; cursor: pointer; font-weight: bold; transition: all 0.2s; }
+    .toggle-btn { padding: 0.2rem 0.6rem; border: 1px solid #555; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 0.75em; transition: all 0.2s; }
     .toggle-btn.on { background: #2ecc71; color: white; }
-    .toggle-btn.off { background: #555; color: #aaa; }
-    .override-indicator { font-size: 0.8em; color: #f39c12; margin-left: 0.5rem; }
-    .switch-status { font-size: 0.8em; color: #888; margin-left: 0.5rem; }
+    .toggle-btn.off { background: #444; color: #888; }
+    .override-indicator { font-size: 0.7em; color: #f39c12; }
+    .switch-status { font-size: 0.7em; color: #666; }
   </style>
 </head>
 <body>
@@ -307,55 +326,53 @@ static String root_page_html() {
     html += " data-lp-loss=\"" + String(lp.loss_pct) + "\"";
     html += ">";
     html += R"(
+  <!-- Top control row: Power, Brightness, Freshness -->
+  <div class="control-row">
+    <div class="power-toggle-panel">
+      <button id="power-btn" class="toggle-btn on">ON</button>
+      <span id="switch-status" class="switch-status"></span>
+    </div>
+    <div class="brightness-panel">
+      <div class="dial-knob" id="brightness-dial" title="Drag to adjust brightness"></div>
+      <span id="brightness-val">8</span>
+      <span id="brightness-pot-status" class="switch-status"></span>
+    </div>
+    <div class="freshness-bar" id="freshness-bar"></div>
+  </div>
+  <!-- Main grid: Labels and data rows -->
   <div class="display-grid">
     <!-- Header row -->
     <div></div>
-    <div class="col-header">WAN1</div>
-    <div class="col-header">WAN2</div>
-    <div class="col-header">Local</div>
-    <!-- State LED row -->
-    <div class="row-label"></div>
-    <div class="led-row" id="w1-leds">
+    <div class="col-header">Status</div>
+    <div class="col-header">L/J/P</div>
+    <div class="col-header">d/U</div>
+    <!-- WAN1 row -->
+    <div class="row-label">WAN1</div>
+    <div class="led-group" id="w1-leds">
       <div class="state-led" id="w1-led-up"></div>
       <div class="state-led" id="w1-led-deg"></div>
       <div class="state-led" id="w1-led-down"></div>
     </div>
-    <div class="led-row" id="w2-leds">
+    <div class="seg-display pkt-display" id="w1-pkt"></div>
+    <div class="seg-display bw-display" id="w1-bw"></div>
+    <!-- WAN2 row -->
+    <div class="row-label">WAN2</div>
+    <div class="led-group" id="w2-leds">
       <div class="state-led" id="w2-led-up"></div>
       <div class="state-led" id="w2-led-deg"></div>
       <div class="state-led" id="w2-led-down"></div>
     </div>
-    <div class="led-row" id="lp-leds">
+    <div class="seg-display pkt-display" id="w2-pkt"></div>
+    <div class="seg-display bw-display" id="w2-bw"></div>
+    <!-- Local row -->
+    <div class="row-label">Local</div>
+    <div class="led-group" id="lp-leds">
       <div class="state-led" id="lp-led-up"></div>
       <div class="state-led" id="lp-led-deg"></div>
       <div class="state-led" id="lp-led-down"></div>
     </div>
-    <!-- L/J/P row -->
-    <div class="row-label">L/J/P</div>
-    <div class="seg-display pkt-display" id="w1-pkt"></div>
-    <div class="seg-display pkt-display" id="w2-pkt"></div>
     <div class="seg-display pkt-display" id="lp-pkt"></div>
-    <!-- d/U row -->
-    <div class="row-label">d/U</div>
-    <div class="seg-display bw-display" id="w1-bw"></div>
-    <div class="seg-display bw-display" id="w2-bw"></div>
     <div></div>
-    <!-- Freshness bar row (24 LEDs generated by JS) -->
-    <div class="row-label">Fresh</div>
-    <div class="freshness-bar" id="freshness-bar"></div>
-  </div>
-</div>
-<div class="display-controls">
-  <div class="power-toggle">
-    <label>Displays:</label>
-    <button id="power-btn" class="toggle-btn on">ON</button>
-    <span id="switch-status" class="switch-status"></span>
-  </div>
-  <div class="brightness-control">
-    <label>Brightness:</label>
-    <input type="range" id="brightness-slider" min="0" max="15" value="8">
-    <span id="brightness-val">8</span>
-    <span id="brightness-pot-status" class="switch-status"></span>
   </div>
 </div>
 <script>
@@ -447,18 +464,6 @@ static String root_page_html() {
   }
   updateFreshness();
   setInterval(updateFreshness, 250); // 250ms is sufficient for 625ms LED transitions
-
-  // Match panel width to table
-  function matchPanelWidth() {
-    var tbl = document.querySelector('table');
-    var panel = document.getElementById('seg-panel');
-    if (tbl && panel) {
-      panel.style.width = tbl.offsetWidth + 'px';
-      panel.style.boxSizing = 'border-box';
-    }
-  }
-  window.addEventListener('load', matchPanelWidth);
-  window.addEventListener('resize', matchPanelWidth);
 
   // === 7-segment displays ===
   var SEG={
@@ -641,24 +646,36 @@ static String root_page_html() {
   fetchData(); // Run immediately
   setInterval(fetchData,5000); // Then every 5 seconds
 
-  // === Brightness control ===
-  var brightnessSlider = document.getElementById('brightness-slider');
+  // === Brightness dial control ===
+  var brightnessDial = document.getElementById('brightness-dial');
   var brightnessVal = document.getElementById('brightness-val');
   var brightnessPotStatus = document.getElementById('brightness-pot-status');
   var currentBrightness = 8;
   var potLevel = 8;
 
+  // Dial rotation: 0=min (-135deg), 15=max (+135deg), total 270deg range
+  function brightnessToAngle(b) { return -135 + (b / 15) * 270; }
+  function angleToBrightness(a) {
+    var b = Math.round(((a + 135) / 270) * 15);
+    return Math.max(0, Math.min(15, b));
+  }
+
+  function updateDialRotation() {
+    brightnessDial.style.transform = 'rotate(' + brightnessToAngle(currentBrightness) + 'deg)';
+  }
+
   function updateBrightnessUI() {
     brightnessVal.textContent = currentBrightness;
+    updateDialRotation();
 
     // Show pot level and override status
     var potText = 'Pot: ' + potLevel;
     if (currentBrightness !== potLevel) {
-      brightnessPotStatus.textContent = potText + ' (overridden)';
+      brightnessPotStatus.textContent = potText;
       brightnessPotStatus.style.color = '#f39c12';
     } else {
       brightnessPotStatus.textContent = potText;
-      brightnessPotStatus.style.color = '#888';
+      brightnessPotStatus.style.color = '#666';
     }
   }
 
@@ -666,7 +683,6 @@ static String root_page_html() {
     fetch('/api/brightness').then(function(r) { return r.json(); }).then(function(d) {
       currentBrightness = d.brightness;
       potLevel = d.pot_level;
-      brightnessSlider.value = currentBrightness;
       updateBrightnessUI();
     }).catch(function(e) { console.error('Brightness fetch error:', e); });
   }
@@ -681,12 +697,52 @@ static String root_page_html() {
     }).catch(function(e) { console.error('Brightness error:', e); });
   }
 
-  brightnessSlider.addEventListener('input', function() {
-    brightnessVal.textContent = this.value;
-  });
-  brightnessSlider.addEventListener('change', function() {
-    postBrightness(this.value);
-  });
+  // Dial drag handling
+  var dialDragging = false;
+  var dialCenterX, dialCenterY;
+
+  function getAngleFromEvent(e) {
+    var x = (e.touches ? e.touches[0].clientX : e.clientX) - dialCenterX;
+    var y = (e.touches ? e.touches[0].clientY : e.clientY) - dialCenterY;
+    var angle = Math.atan2(x, -y) * (180 / Math.PI);
+    return Math.max(-135, Math.min(135, angle));
+  }
+
+  brightnessDial.addEventListener('mousedown', startDrag);
+  brightnessDial.addEventListener('touchstart', startDrag);
+
+  function startDrag(e) {
+    e.preventDefault();
+    dialDragging = true;
+    var rect = brightnessDial.getBoundingClientRect();
+    dialCenterX = rect.left + rect.width / 2;
+    dialCenterY = rect.top + rect.height / 2;
+    document.addEventListener('mousemove', onDrag);
+    document.addEventListener('touchmove', onDrag);
+    document.addEventListener('mouseup', endDrag);
+    document.addEventListener('touchend', endDrag);
+  }
+
+  function onDrag(e) {
+    if (!dialDragging) return;
+    var angle = getAngleFromEvent(e);
+    var newBrightness = angleToBrightness(angle);
+    if (newBrightness !== currentBrightness) {
+      currentBrightness = newBrightness;
+      updateBrightnessUI();
+    }
+  }
+
+  function endDrag(e) {
+    if (dialDragging) {
+      dialDragging = false;
+      postBrightness(currentBrightness);
+    }
+    document.removeEventListener('mousemove', onDrag);
+    document.removeEventListener('touchmove', onDrag);
+    document.removeEventListener('mouseup', endDrag);
+    document.removeEventListener('touchend', endDrag);
+  }
 
   // Load initial brightness and poll for changes
   fetchBrightnessState();
@@ -702,15 +758,9 @@ static String root_page_html() {
     powerBtn.textContent = displaysOn ? 'ON' : 'OFF';
     powerBtn.className = 'toggle-btn ' + (displaysOn ? 'on' : 'off');
 
-    // Show switch position and override status
-    var switchText = 'Switch: ' + (switchPosition ? 'ON' : 'OFF');
-    if (displaysOn !== switchPosition) {
-      switchStatus.textContent = switchText + ' (overridden)';
-      switchStatus.style.color = '#f39c12';
-    } else {
-      switchStatus.textContent = switchText;
-      switchStatus.style.color = '#888';
-    }
+    // Show switch position (color indicates override)
+    switchStatus.textContent = 'Switch: ' + (switchPosition ? 'ON' : 'OFF');
+    switchStatus.style.color = (displaysOn !== switchPosition) ? '#f39c12' : '#666';
   }
 
   function fetchPowerState() {
