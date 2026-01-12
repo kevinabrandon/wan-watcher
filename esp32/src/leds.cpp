@@ -166,7 +166,8 @@ static void wan_leds_all_off() {
     g_led_wan2_down.set(false);
 }
 
-// Helper to turn off ALL LEDs (used when displays are disabled)
+// Helper to turn off ALL indicator LEDs (used when displays are disabled)
+// Note: Status LED is managed separately by loop() based on Ethernet state
 static void all_leds_off() {
     g_led_wan1_up.set(false);
     g_led_wan1_degraded.set(false);
@@ -177,7 +178,6 @@ static void all_leds_off() {
     g_led_local_up.set(false);
     g_led_local_degraded.set(false);
     g_led_local_down.set(false);
-    g_led_status1.set(false);
 }
 
 void router_heartbeat_check() {
@@ -408,8 +408,7 @@ void set_displays_on(bool on) {
         wan1_set_leds(m1.state);
         wan2_set_leds(m2.state);
         // Local pinger LEDs are restored by the normal loop() update cycle
-        // Restore status LED (indicates network connection)
-        g_led_status1.set(true);
+        // Status LED is managed by loop() based on Ethernet state
     }
 }
 
