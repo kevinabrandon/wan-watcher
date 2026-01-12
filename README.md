@@ -4,6 +4,10 @@ A physical WAN health indicator for pfSense using an ESP32.
 
 wan-watcher collects real-time WAN metrics from pfSense (latency, loss, jitter, and bandwidth usage) and exposes them to an ESP32, which drives LEDs and 7-segment displays. The result is a small physical panel that shows your internet health at a glance.
 
+## What it looks like
+
+![wan-watcher panel](./wan-watcher.png)
+
 ---
 
 ## Features
