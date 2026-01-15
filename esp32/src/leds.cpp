@@ -25,20 +25,17 @@ ButtonHandler g_button_handler_bandwidth;
 FreshnessBar g_freshness_bar;
 static bool g_use_display_manager = false;
 
-// MCP-based LEDs - WAN1 (pins 0-2)
-Led g_led_wan1_up(0, LedPinType::MCP, &g_mcp);
-Led g_led_wan1_degraded(1, LedPinType::MCP, &g_mcp);
-Led g_led_wan1_down(2, LedPinType::MCP, &g_mcp);
+// MCP-based bicolor LEDs - WAN1 (pins 0-1)
+Led g_led_wan1_green(0, LedPinType::MCP, &g_mcp);
+Led g_led_wan1_red(1, LedPinType::MCP, &g_mcp);
 
-// MCP-based LEDs - WAN2 (pins 3-5)
-Led g_led_wan2_up(3, LedPinType::MCP, &g_mcp);
-Led g_led_wan2_degraded(4, LedPinType::MCP, &g_mcp);
-Led g_led_wan2_down(5, LedPinType::MCP, &g_mcp);
+// MCP-based bicolor LEDs - WAN2 (pins 2-3)
+Led g_led_wan2_green(2, LedPinType::MCP, &g_mcp);
+Led g_led_wan2_red(3, LedPinType::MCP, &g_mcp);
 
-// MCP-based LEDs - Local pinger (pins 6-8)
-Led g_led_local_up(6, LedPinType::MCP, &g_mcp);
-Led g_led_local_degraded(7, LedPinType::MCP, &g_mcp);
-Led g_led_local_down(8, LedPinType::MCP, &g_mcp);
+// MCP-based bicolor LEDs - Local pinger (pins 4-5)
+Led g_led_local_green(4, LedPinType::MCP, &g_mcp);
+Led g_led_local_red(5, LedPinType::MCP, &g_mcp);
 
 // GPIO-based LEDs
 Led g_led_status1(4, LedPinType::GPIO);
@@ -82,25 +79,22 @@ void wan1_set_leds(WanState state) {
     if (!g_displays_on) return;  // All LEDs off when displays disabled
     switch (state) {
         case WanState::UP:
-            g_led_wan1_up.set(true);
-            g_led_wan1_degraded.set(false);
-            g_led_wan1_down.set(false);
-            Serial.println("WAN1 LEDs -> UP");
+            g_led_wan1_green.set(true);
+            g_led_wan1_red.set(false);
+            Serial.println("WAN1 LED -> GREEN (UP)");
             break;
 
         case WanState::DEGRADED:
-            g_led_wan1_up.set(false);
-            g_led_wan1_degraded.set(true);
-            g_led_wan1_down.set(false);
-            Serial.println("WAN1 LEDs -> DEGRADED");
+            g_led_wan1_green.set(true);
+            g_led_wan1_red.set(true);  // Both on = yellow/amber
+            Serial.println("WAN1 LED -> YELLOW (DEGRADED)");
             break;
 
         case WanState::DOWN:
         default:
-            g_led_wan1_up.set(false);
-            g_led_wan1_degraded.set(false);
-            g_led_wan1_down.set(true);
-            Serial.println("WAN1 LEDs -> DOWN");
+            g_led_wan1_green.set(false);
+            g_led_wan1_red.set(true);
+            Serial.println("WAN1 LED -> RED (DOWN)");
             break;
     }
 }
@@ -109,25 +103,22 @@ void wan2_set_leds(WanState state) {
     if (!g_displays_on) return;  // All LEDs off when displays disabled
     switch (state) {
         case WanState::UP:
-            g_led_wan2_up.set(true);
-            g_led_wan2_degraded.set(false);
-            g_led_wan2_down.set(false);
-            Serial.println("WAN2 LEDs -> UP");
+            g_led_wan2_green.set(true);
+            g_led_wan2_red.set(false);
+            Serial.println("WAN2 LED -> GREEN (UP)");
             break;
 
         case WanState::DEGRADED:
-            g_led_wan2_up.set(false);
-            g_led_wan2_degraded.set(true);
-            g_led_wan2_down.set(false);
-            Serial.println("WAN2 LEDs -> DEGRADED");
+            g_led_wan2_green.set(true);
+            g_led_wan2_red.set(true);  // Both on = yellow/amber
+            Serial.println("WAN2 LED -> YELLOW (DEGRADED)");
             break;
 
         case WanState::DOWN:
         default:
-            g_led_wan2_up.set(false);
-            g_led_wan2_degraded.set(false);
-            g_led_wan2_down.set(true);
-            Serial.println("WAN2 LEDs -> DOWN");
+            g_led_wan2_green.set(false);
+            g_led_wan2_red.set(true);
+            Serial.println("WAN2 LED -> RED (DOWN)");
             break;
     }
 }
@@ -136,48 +127,40 @@ void local_pinger_set_leds(WanState state) {
     if (!g_displays_on) return;  // All LEDs off when displays disabled
     switch (state) {
         case WanState::UP:
-            g_led_local_up.set(true);
-            g_led_local_degraded.set(false);
-            g_led_local_down.set(false);
+            g_led_local_green.set(true);
+            g_led_local_red.set(false);
             break;
 
         case WanState::DEGRADED:
-            g_led_local_up.set(false);
-            g_led_local_degraded.set(true);
-            g_led_local_down.set(false);
+            g_led_local_green.set(true);
+            g_led_local_red.set(true);  // Both on = yellow/amber
             break;
 
         case WanState::DOWN:
         default:
-            g_led_local_up.set(false);
-            g_led_local_degraded.set(false);
-            g_led_local_down.set(true);
+            g_led_local_green.set(false);
+            g_led_local_red.set(true);
             break;
     }
 }
 
 // Helper to turn off all WAN LEDs (used during blink-off phase)
 static void wan_leds_all_off() {
-    g_led_wan1_up.set(false);
-    g_led_wan1_degraded.set(false);
-    g_led_wan1_down.set(false);
-    g_led_wan2_up.set(false);
-    g_led_wan2_degraded.set(false);
-    g_led_wan2_down.set(false);
+    g_led_wan1_green.set(false);
+    g_led_wan1_red.set(false);
+    g_led_wan2_green.set(false);
+    g_led_wan2_red.set(false);
 }
 
 // Helper to turn off ALL indicator LEDs (used when displays are disabled)
 // Note: Status LED is managed separately by loop() based on Ethernet state
 static void all_leds_off() {
-    g_led_wan1_up.set(false);
-    g_led_wan1_degraded.set(false);
-    g_led_wan1_down.set(false);
-    g_led_wan2_up.set(false);
-    g_led_wan2_degraded.set(false);
-    g_led_wan2_down.set(false);
-    g_led_local_up.set(false);
-    g_led_local_degraded.set(false);
-    g_led_local_down.set(false);
+    g_led_wan1_green.set(false);
+    g_led_wan1_red.set(false);
+    g_led_wan2_green.set(false);
+    g_led_wan2_red.set(false);
+    g_led_local_green.set(false);
+    g_led_local_red.set(false);
 }
 
 void router_heartbeat_check() {
@@ -203,13 +186,11 @@ void router_heartbeat_check() {
 
         // Sync WAN LED blinking with freshness bar
         if (g_freshness_bar.isBlinkOn()) {
-            // Blink on: show DOWN state (red LEDs)
-            g_led_wan1_down.set(true);
-            g_led_wan1_up.set(false);
-            g_led_wan1_degraded.set(false);
-            g_led_wan2_down.set(true);
-            g_led_wan2_up.set(false);
-            g_led_wan2_degraded.set(false);
+            // Blink on: show DOWN state (red only)
+            g_led_wan1_green.set(false);
+            g_led_wan1_red.set(true);
+            g_led_wan2_green.set(false);
+            g_led_wan2_red.set(true);
         } else {
             // Blink off: all LEDs off
             wan_leds_all_off();
@@ -262,16 +243,13 @@ void leds_init() {
         g_display.setBrightness(8);
     }
 
-    // Initialize all LEDs
-    g_led_wan1_up.begin();
-    g_led_wan1_degraded.begin();
-    g_led_wan1_down.begin();
-    g_led_wan2_up.begin();
-    g_led_wan2_degraded.begin();
-    g_led_wan2_down.begin();
-    g_led_local_up.begin();
-    g_led_local_degraded.begin();
-    g_led_local_down.begin();
+    // Initialize all LEDs (bicolor: green/red pairs)
+    g_led_wan1_green.begin();
+    g_led_wan1_red.begin();
+    g_led_wan2_green.begin();
+    g_led_wan2_red.begin();
+    g_led_local_green.begin();
+    g_led_local_red.begin();
     g_led_status1.begin();
 
     // Reset timeout state
@@ -327,16 +305,13 @@ void leds_init_with_displays(const DisplaySystemConfig& config) {
         g_button_handler_bandwidth.setLongPressThreshold(config.long_press_ms);
     }
 
-    // Initialize all LEDs
-    g_led_wan1_up.begin();
-    g_led_wan1_degraded.begin();
-    g_led_wan1_down.begin();
-    g_led_wan2_up.begin();
-    g_led_wan2_degraded.begin();
-    g_led_wan2_down.begin();
-    g_led_local_up.begin();
-    g_led_local_degraded.begin();
-    g_led_local_down.begin();
+    // Initialize all LEDs (bicolor: green/red pairs)
+    g_led_wan1_green.begin();
+    g_led_wan1_red.begin();
+    g_led_wan2_green.begin();
+    g_led_wan2_red.begin();
+    g_led_local_green.begin();
+    g_led_local_red.begin();
     g_led_status1.begin();
 
     // Reset timeout state

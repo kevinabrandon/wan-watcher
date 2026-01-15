@@ -24,7 +24,7 @@ wan-watcher collects real-time WAN metrics from pfSense (latency, loss, jitter, 
 
 * **ESP32 indicator panel**
   * Receives metrics via JSON API (`POST /api/wans` batch endpoint)
-  * LED indicators for WAN1, WAN2, and Local state (UP / DEGRADED / DOWN) via MCP23017 I2C expander
+  * Bicolor LED indicators for WAN1, WAN2, and Local state (green=UP, yellow=DEGRADED, red=DOWN) via MCP23017 I2C expander
   * 24-segment bicolor LED bargraph showing data freshness:
     * 0–15s: green bar fills (fresh data)
     * 20–35s: yellow overwrites green (getting stale)
@@ -48,7 +48,7 @@ wan-watcher collects real-time WAN metrics from pfSense (latency, loss, jitter, 
 * **Web UI**
   * Live-updating metrics table (refreshes every 5 seconds without page reload)
   * CSS-based 7-segment display panel mimicking the physical hardware layout
-  * Virtual state LEDs (UP/DEGRADED/DOWN) for each interface
+  * Virtual bicolor state LEDs for each interface (green/yellow/red matching hardware)
   * Freshness indicator bar (24 discrete LEDs matching hardware):
     * 0–15s: green bar fills (fresh data)
     * 20–35s: yellow overwrites green (getting stale)
@@ -66,7 +66,7 @@ wan-watcher collects real-time WAN metrics from pfSense (latency, loss, jitter, 
   * ICMP pinger to configurable target (default 8.8.8.8)
   * Calculates latency, jitter, loss percentage (dpinger-style)
     * Averaged over a 60 second window with 120 samples (every 500ms)
-  * Separate UP/DEGRADED/DOWN LEDs for local path
+  * Bicolor LED for local path (green=UP, yellow=DEGRADED, red=DOWN)
   * Separate 7-segment display for local packet stats (L/J/P)
 
 ## Failure Behavior
@@ -81,7 +81,7 @@ wan-watcher collects real-time WAN metrics from pfSense (latency, loss, jitter, 
 * 5× Adafruit 4-digit 7-segment displays (HT16K33, addresses 0x71-0x75)
 * 1× Adafruit Bicolor 24-Bar Bargraph w/I2C Backpack (HT16K33, address 0x70)
 * 2× Momentary push buttons (active low, directly to MCP23017 with internal pull-ups)
-* Panel-mount LEDs for WAN status indicators
+* 3× Bicolor (green/red) LEDs for WAN status indicators (WAN1, WAN2, Local)
 
 ### I2C Wiring (Stemma QT / Qwiic)
 
@@ -94,20 +94,19 @@ wan-watcher collects real-time WAN metrics from pfSense (latency, loss, jitter, 
 
 | Pin | Type | Function |
 |-----|------|----------|
-| MCP 0 | MCP23017 | WAN1 UP (green) |
-| MCP 1 | MCP23017 | WAN1 DEGRADED (yellow) |
-| MCP 2 | MCP23017 | WAN1 DOWN (red) |
-| MCP 3 | MCP23017 | WAN2 UP (green) |
-| MCP 4 | MCP23017 | WAN2 DEGRADED (yellow) |
-| MCP 5 | MCP23017 | WAN2 DOWN (red) |
-| MCP 6 | MCP23017 | Local UP (green) |
-| MCP 7 | MCP23017 | Local DEGRADED (yellow) |
-| MCP 8 | MCP23017 | Local DOWN (red) |
+| MCP 0 | MCP23017 | WAN1 Green LED |
+| MCP 1 | MCP23017 | WAN1 Red LED |
+| MCP 2 | MCP23017 | WAN2 Green LED |
+| MCP 3 | MCP23017 | WAN2 Red LED |
+| MCP 4 | MCP23017 | Local Green LED |
+| MCP 5 | MCP23017 | Local Red LED |
 | MCP 13 | MCP23017 | Power switch (INPUT_PULLUP, active low) |
 | MCP 14 | MCP23017 | Packet display button (INPUT_PULLUP) |
 | MCP 15 | MCP23017 | Bandwidth display button (INPUT_PULLUP) |
 | GPIO 4 | ESP32 | Ethernet status LED |
 | GPIO 36 | ESP32 | Brightness potentiometer (ADC1, analog input) |
+
+**Bicolor LED states:** Green = UP, Both on (yellow/amber) = DEGRADED, Red = DOWN
 
 ### Display I2C Addresses
 
@@ -366,7 +365,7 @@ Set the display brightness (overrides potentiometer until dial is turned).
  - Ethernet connection with status LED
  - Static hostname (`wan-watcher`) + mDNS support
  - HTTP server + routes
- - WAN1 and WAN2 LED state machines (UP / DEGRADED / DOWN)
+ - WAN1 and WAN2 bicolor LED state machines (green=UP, yellow=DEGRADED, red=DOWN)
  - 24-segment bicolor LED bargraph for data freshness (green→yellow→red fill, blinks when stale)
  - Auto-timeout all WANs to DOWN with blinking LEDs after 60 seconds of no updates
  - MCP23017 GPIO expander for LED control
@@ -379,12 +378,13 @@ Set the display brightness (overrides potentiometer until dial is turned).
  - Displays show "----" when interface is DOWN
  - Physical power switch (MCP pin 13) with web UI sync
  - Brightness potentiometer (GPIO 36) with web UI sync
+ - Bicolor LEDs (green/red) for status indicators (green=UP, both=DEGRADED, red=DOWN)
 
 #### ESP32 Web UI
 
  - Live-updating metrics table (every 5 seconds, no page reload)
  - CSS-based 7-segment display panel mimicking hardware layout
- - Virtual state LEDs (UP/DEGRADED/DOWN) for each interface
+ - Virtual bicolor state LEDs for each interface (green/yellow/red matching hardware)
  - Freshness indicator bar (24 discrete LEDs matching hardware, green→yellow→red fill)
  - Click-to-cycle and auto-cycle for display metrics
  - Dynamic favicon color based on Local pinger state
@@ -396,13 +396,13 @@ Set the display brightness (overrides potentiometer until dial is turned).
 
  - ICMP ping to configurable target (default 8.8.8.8)
  - Calculate latency, jitter, loss percentage (dpinger-style)
- - Separate UP/DEGRADED/DOWN LEDs for local path
+ - Bicolor LED for local path (green=UP, yellow=DEGRADED, red=DOWN)
  - Separate 7-segment display for local packet stats (L/J/P)
  - Configurable thresholds for degraded/down states
 
 ### Planned
 
-* [ ] Replace 9 discrete LEDs (3×3 matrix of green/yellow/red) with 3 bicolor green/red LEDs
+* [ ] PWM dimming for status LEDs (GPIO 14 via transistor)
 * [ ] Build into custom panel enclosure, document with photos
 
 ---

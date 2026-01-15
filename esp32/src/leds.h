@@ -10,16 +10,14 @@
 #include "freshness_bar.h"
 #include "brightness_pot.h"
 
-// LED objects (defined in leds.cpp)
-extern Led g_led_wan1_up;
-extern Led g_led_wan1_degraded;
-extern Led g_led_wan1_down;
-extern Led g_led_wan2_up;
-extern Led g_led_wan2_degraded;
-extern Led g_led_wan2_down;
-extern Led g_led_local_up;
-extern Led g_led_local_degraded;
-extern Led g_led_local_down;
+// Bicolor LED objects (defined in leds.cpp)
+// Each indicator has green and red LEDs; yellow/amber = both on
+extern Led g_led_wan1_green;
+extern Led g_led_wan1_red;
+extern Led g_led_wan2_green;
+extern Led g_led_wan2_red;
+extern Led g_led_local_green;
+extern Led g_led_local_red;
 extern Led g_led_status1;
 
 // Display manager and button handlers (defined in leds.cpp)
