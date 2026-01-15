@@ -348,29 +348,17 @@ static String root_page_html() {
     <div class="col-header">d/U</div>
     <!-- WAN1 row -->
     <div class="row-label">WAN1</div>
-    <div class="led-group" id="w1-leds">
-      <div class="state-led" id="w1-led-up"></div>
-      <div class="state-led" id="w1-led-deg"></div>
-      <div class="state-led" id="w1-led-down"></div>
-    </div>
+    <div class="led-group"><div class="state-led" id="w1-led"></div></div>
     <div class="seg-display pkt-display" id="w1-pkt"></div>
     <div class="seg-display bw-display" id="w1-bw"></div>
     <!-- WAN2 row -->
     <div class="row-label">WAN2</div>
-    <div class="led-group" id="w2-leds">
-      <div class="state-led" id="w2-led-up"></div>
-      <div class="state-led" id="w2-led-deg"></div>
-      <div class="state-led" id="w2-led-down"></div>
-    </div>
+    <div class="led-group"><div class="state-led" id="w2-led"></div></div>
     <div class="seg-display pkt-display" id="w2-pkt"></div>
     <div class="seg-display bw-display" id="w2-bw"></div>
     <!-- Local row -->
     <div class="row-label">Local</div>
-    <div class="led-group" id="lp-leds">
-      <div class="state-led" id="lp-led-up"></div>
-      <div class="state-led" id="lp-led-deg"></div>
-      <div class="state-led" id="lp-led-down"></div>
-    </div>
+    <div class="led-group"><div class="state-led" id="lp-led"></div></div>
     <div class="seg-display pkt-display" id="lp-pkt"></div>
     <div></div>
   </div>
@@ -526,19 +514,17 @@ static String root_page_html() {
     return elapsed>=F.redBufferEnd;
   }
 
-  // === State LED update ===
+  // === State LED update (single bicolor LED per row) ===
   function setLeds(prefix,state,stale){
-    var $=function(id){return document.getElementById(id);};
-    var up=$(prefix+'-led-up'),deg=$(prefix+'-led-deg'),dn=$(prefix+'-led-down');
+    var led=document.getElementById(prefix+'-led');
     if(stale){
-      // When stale, blink down LED using CSS animation
-      up.className='state-led off';
-      deg.className='state-led off';
-      dn.className='state-led blink-red';
+      led.className='state-led blink-red';
+    }else if(state==='up'){
+      led.className='state-led green';
+    }else if(state==='degraded'){
+      led.className='state-led yellow';
     }else{
-      up.className='state-led '+(state==='up'?'green':'off');
-      deg.className='state-led '+(state==='degraded'?'yellow':'off');
-      dn.className='state-led '+(state==='down'?'red':'off');
+      led.className='state-led red';
     }
   }
   function updLeds(){
