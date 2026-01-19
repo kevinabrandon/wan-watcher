@@ -224,37 +224,37 @@ static String root_page_html() {
     .freshness-bar.blink .freshness-led.red { animation: led-blink 0.5s infinite; }
     @keyframes led-blink { 50% { background: #333; box-shadow: none; } }
     /* 7-segment display panel */
-    .display-panel { background: #c8c8a4; padding: 1rem; border-radius: 8px; margin: 1rem 0; display: inline-block; border: 2px solid #444; }
+    .display-panel { background: #3a3a3a; padding: 1rem; border-radius: 8px; margin: 1rem 0; display: inline-block; border: 2px solid #555; }
     .display-grid { display: grid; grid-template-columns: auto auto auto auto; gap: 25px 25px; align-items: center; }
-    .display-grid .row-label { color: #999; font-size: 0.9em; font-weight: bold; text-align: right; padding-right: 8px; }
-    .display-grid .col-header { color: #666; font-size: 0.8em; font-weight: bold; text-align: center; }
+    .display-grid .row-label { color: #ccc; font-size: 0.9em; font-weight: bold; text-align: right; padding-right: 8px; }
+    .display-grid .col-header { color: #aaa; font-size: 0.8em; font-weight: bold; text-align: center; }
     .seg-display { display: inline-flex; background: #111; padding: 8px 12px; border-radius: 6px; cursor: pointer; justify-self: center; }
     /* Top control row */
     .control-row { display: flex; align-items: left; gap: 16px; margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid #444; }
     .power-toggle-panel { display: flex; align-items: center; gap: 8px; }
-    .power-toggle-panel label { color: #999; font-size: 0.8em; }
+    .power-toggle-panel label { color: #ccc; font-size: 0.8em; }
     .brightness-panel { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
-    .brightness-panel span { color: #999; font-size: 0.8em; min-width: 1.5em; }
+    .brightness-panel span { color: #ccc; font-size: 0.8em; min-width: 1.5em; }
     .dial-knob {
       width: 36px; height: 36px;
-      background: linear-gradient(145deg, #3a3a3a, #252525);
+      background: linear-gradient(145deg, #2a4a6a, #1a3050);
       border-radius: 50%;
-      border: 2px solid #555;
+      border: 2px solid #4a7aa0;
       position: relative;
       cursor: pointer;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255,255,255,0.1);
+      box-shadow: 0 2px 4px rgba(0,0,0,0.5), inset 0 1px 1px rgba(100,150,200,0.2);
     }
     .dial-knob::after {
       content: '';
       position: absolute;
       top: 4px; left: 50%;
       width: 3px; height: 10px;
-      background: #ddd;
+      background: #8ac;
       border-radius: 2px;
       transform: translateX(-50%);
-      box-shadow: 0 0 3px rgba(255,255,255,0.3);
+      box-shadow: 0 0 3px rgba(100,150,200,0.4);
     }
-    .dial-knob:hover { border-color: #777; }
+    .dial-knob:hover { border-color: #6a9ac0; }
     .dial-knob:active { box-shadow: 0 1px 2px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255,255,255,0.1); }
     .freshness-bar { width: 180px; flex-shrink: 0; }
     /* State LEDs */
@@ -283,7 +283,7 @@ static String root_page_html() {
     .toggle-btn.on { background: #2ecc71; color: white; }
     .toggle-btn.off { background: #444; color: #888; }
     .override-indicator { font-size: 0.7em; color: #f39c12; }
-    .switch-status { font-size: 0.7em; color: #666; }
+    .switch-status { font-size: 0.7em; color: #999; }
   </style>
 </head>
 <body>
@@ -661,7 +661,7 @@ static String root_page_html() {
       brightnessPotStatus.style.color = '#f39c12';
     } else {
       brightnessPotStatus.textContent = potText;
-      brightnessPotStatus.style.color = '#666';
+      brightnessPotStatus.style.color = '#999';
     }
   }
 
@@ -746,7 +746,7 @@ static String root_page_html() {
 
     // Show switch position (color indicates override)
     switchStatus.textContent = 'Switch: ' + (switchPosition ? 'ON' : 'OFF');
-    switchStatus.style.color = (displaysOn !== switchPosition) ? '#f39c12' : '#666';
+    switchStatus.style.color = (displaysOn !== switchPosition) ? '#f39c12' : '#999';
   }
 
   function fetchPowerState() {
