@@ -5,12 +5,6 @@
 
 DisplayManager::DisplayManager()
     : _active_count(0)
-    , _led_latency(nullptr)
-    , _led_jitter(nullptr)
-    , _led_loss(nullptr)
-    , _led_download(nullptr)
-    , _led_upload(nullptr)
-    , _mcp(nullptr)
     , _last_cycle_ms(0)
     , _current_packet_metric(PacketMetric::LATENCY)
     , _current_bw_metric(BandwidthMetric::DOWNLOAD)
@@ -28,7 +22,6 @@ void DisplayManager::begin(const DisplaySystemConfig& config,
                            Adafruit_MCP23X17* mcp,
                            TwoWire* wire) {
     _config = config;
-    _mcp = mcp;
     _last_cycle_ms = millis();
     _packet_auto_cycle = config.auto_cycle_enabled;
     _bw_auto_cycle = config.auto_cycle_enabled;
@@ -71,31 +64,12 @@ void DisplayManager::begin(const DisplaySystemConfig& config,
                       LOCAL_PINGER_IDX, LOCAL_PINGER_DISPLAY_ADDR);
     }
 
-    // Initialize indicator LEDs only if INDICATOR_LED mode
-    if (config.mode == DisplayMode::INDICATOR_LED && mcp != nullptr) {
-        _led_latency = new Led(config.led_latency_pin, LedPinType::MCP, mcp);
-        _led_jitter = new Led(config.led_jitter_pin, LedPinType::MCP, mcp);
-        _led_loss = new Led(config.led_loss_pin, LedPinType::MCP, mcp);
-        _led_download = new Led(config.led_download_pin, LedPinType::MCP, mcp);
-        _led_upload = new Led(config.led_upload_pin, LedPinType::MCP, mcp);
-
-        _led_latency->begin();
-        _led_jitter->begin();
-        _led_loss->begin();
-        _led_download->begin();
-        _led_upload->begin();
-
-        Serial.println("Indicator LEDs initialized");
-    }
-
     // Initial sync and render
     syncAllDisplayMetrics();
-    updateIndicatorLeds();
     renderAllDisplays();
 
-    Serial.printf("DisplayManager: %d display(s) active, mode=%s, cycle=%lums\n",
+    Serial.printf("DisplayManager: %d display(s) active, cycle=%lums\n",
                   _active_count,
-                  config.mode == DisplayMode::PREFIX_LETTER ? "PREFIX_LETTER" : "INDICATOR_LED",
                   config.cycle_interval_ms);
 }
 
@@ -116,7 +90,6 @@ void DisplayManager::update() {
 
         if (_packet_auto_cycle || _bw_auto_cycle) {
             syncAllDisplayMetrics();
-            updateIndicatorLeds();
         }
     }
 
@@ -148,23 +121,10 @@ void DisplayManager::syncAllDisplayMetrics() {
     }
 }
 
-void DisplayManager::updateIndicatorLeds() {
-    if (_config.mode != DisplayMode::INDICATOR_LED) return;
-
-    // Packet indicators: only one lit
-    if (_led_latency) _led_latency->set(_current_packet_metric == PacketMetric::LATENCY);
-    if (_led_jitter) _led_jitter->set(_current_packet_metric == PacketMetric::JITTER);
-    if (_led_loss) _led_loss->set(_current_packet_metric == PacketMetric::LOSS);
-
-    // Bandwidth indicators: only one lit
-    if (_led_download) _led_download->set(_current_bw_metric == BandwidthMetric::DOWNLOAD);
-    if (_led_upload) _led_upload->set(_current_bw_metric == BandwidthMetric::UPLOAD);
-}
-
 void DisplayManager::renderAllDisplays() {
     for (int i = 0; i < MAX_DISPLAYS; i++) {
         if (_displays[i].isReady()) {
-            _displays[i].render(_config.mode);
+            _displays[i].render();
         }
     }
 }
@@ -173,7 +133,6 @@ void DisplayManager::advancePacketMetric() {
     _last_cycle_ms = millis();  // Reset shared cycle timer
     cyclePacketMetric();
     syncAllDisplayMetrics();
-    updateIndicatorLeds();
     renderAllDisplays();
     Serial.println("Packet metric advanced");
 }
@@ -182,7 +141,6 @@ void DisplayManager::advanceBandwidthMetric() {
     _last_cycle_ms = millis();  // Reset shared cycle timer
     cycleBandwidthMetric();
     syncAllDisplayMetrics();
-    updateIndicatorLeds();
     renderAllDisplays();
     Serial.println("Bandwidth metric advanced");
 }
@@ -197,14 +155,6 @@ void DisplayManager::toggleBandwidthAutoCycle() {
     _bw_auto_cycle = !_bw_auto_cycle;
     _last_cycle_ms = millis();  // Reset timer to keep displays in sync
     Serial.printf("Bandwidth auto-cycle: %s\n", _bw_auto_cycle ? "ON" : "OFF");
-}
-
-DisplayMode DisplayManager::displayMode() const {
-    return _config.mode;
-}
-
-void DisplayManager::setDisplayMode(DisplayMode mode) {
-    _config.mode = mode;
 }
 
 void DisplayManager::setBrightness(uint8_t brightness) {

@@ -42,7 +42,8 @@ wan-watcher collects real-time WAN metrics from pfSense (latency, loss, jitter, 
     * Turns all displays and LEDs on/off
     * Web UI can override; physical switch toggle overrides back
   * Brightness potentiometer (GPIO 36):
-    * Analog dial controls display brightness (0-15)
+    * Analog dial controls brightness (0-15) for displays and status LEDs
+    * Status LEDs use PWM with gamma correction for smooth dimming
     * Web UI slider can override; turning dial overrides back
 
 * **Web UI**
@@ -100,10 +101,11 @@ wan-watcher collects real-time WAN metrics from pfSense (latency, loss, jitter, 
 | MCP 3 | MCP23017 | WAN2 Red LED |
 | MCP 4 | MCP23017 | Local Green LED |
 | MCP 5 | MCP23017 | Local Red LED |
+| MCP 7 | MCP23017 | Ethernet status LED |
 | MCP 13 | MCP23017 | Power switch (INPUT_PULLUP, active low) |
 | MCP 14 | MCP23017 | Packet display button (INPUT_PULLUP) |
 | MCP 15 | MCP23017 | Bandwidth display button (INPUT_PULLUP) |
-| GPIO 4 | ESP32 | Ethernet status LED |
+| GPIO 14 | ESP32 | Status LED PWM brightness (transistor base) |
 | GPIO 36 | ESP32 | Brightness potentiometer (ADC1, analog input) |
 
 **Bicolor LED states:** Green = UP, Both on (yellow/amber) = DEGRADED, Red = DOWN
@@ -345,67 +347,6 @@ Set the display brightness (overrides potentiometer until dial is turned).
 - Intended for a trusted VLAN
 - No authentication by default
 - Do not expose the ESP32 API to untrusted networks
-
----
-
-## Roadmap
-
-### Implemented
-
-#### pfSense Side
-
- - Poll dpinger for latency/jitter/loss
- - Auto-detect WAN interfaces
- - Calculate per-WAN bandwidth usage
- - Implement HTTP client to POST metrics to ESP32 (JSON API)
- - Multi-WAN POST support
-
-#### ESP32 Side
-
- - Ethernet connection with status LED
- - Static hostname (`wan-watcher`) + mDNS support
- - HTTP server + routes
- - WAN1 and WAN2 bicolor LED state machines (green=UP, yellow=DEGRADED, red=DOWN)
- - 24-segment bicolor LED bargraph for data freshness (green→yellow→red fill, blinks when stale)
- - Auto-timeout all WANs to DOWN with blinking LEDs after 60 seconds of no updates
- - MCP23017 GPIO expander for LED control
- - LED abstraction class (supports GPIO and MCP23017 pins)
- - Multi-WAN support (2 WANs with 2 displays each)
- - Display modes (latency / jitter / loss / download / upload)
- - Button input for cycling modes (short press: advance, long press: toggle auto-cycle)
- - Multiple 7-segment displays (packet + bandwidth per WAN)
- - Auto-cycle enabled by default (5-second interval)
- - Displays show "----" when interface is DOWN
- - Physical power switch (MCP pin 13) with web UI sync
- - Brightness potentiometer (GPIO 36) with web UI sync
- - Bicolor LEDs (green/red) for status indicators (green=UP, both=DEGRADED, red=DOWN)
-
-#### ESP32 Web UI
-
- - Live-updating metrics table (every 5 seconds, no page reload)
- - CSS-based 7-segment display panel mimicking hardware layout
- - Virtual bicolor state LEDs for each interface (green/yellow/red matching hardware)
- - Freshness indicator bar (24 discrete LEDs matching hardware, green→yellow→red fill)
- - Click-to-cycle and auto-cycle for display metrics
- - Dynamic favicon color based on Local pinger state
- - Local timezone display for timestamps
- - Brightness slider with potentiometer sync and override indication
- - Display power toggle with physical switch sync and override indication
-
-#### ESP32 Local Pinger
-
- - ICMP ping to configurable target (default 8.8.8.8)
- - Calculate latency, jitter, loss percentage (dpinger-style)
- - Bicolor LED for local path (green=UP, yellow=DEGRADED, red=DOWN)
- - Separate 7-segment display for local packet stats (L/J/P)
- - Configurable thresholds for degraded/down states
-
-### Planned
-
-* [ ] PWM dimming for status LEDs (GPIO 14 via transistor)
-* [ ] Build into custom panel enclosure, document with photos
-
----
 
 ## License
 

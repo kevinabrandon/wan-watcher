@@ -6,13 +6,12 @@
 #include <Adafruit_MCP23X17.h>
 #include "display_config.h"
 #include "metric_display.h"
-#include "led.h"
 
 class DisplayManager {
 public:
     DisplayManager();
 
-    // Initialize all displays and indicator LEDs
+    // Initialize all displays
     void begin(const DisplaySystemConfig& config, Adafruit_MCP23X17* mcp, TwoWire* wire = &Wire);
 
     // Call from loop() - handles cycling, rendering
@@ -23,10 +22,6 @@ public:
     void advanceBandwidthMetric();   // Bandwidth button short press
     void togglePacketAutoCycle();    // Packet button long press
     void toggleBandwidthAutoCycle(); // Bandwidth button long press
-
-    // Configuration access
-    DisplayMode displayMode() const;
-    void setDisplayMode(DisplayMode mode);
 
     // Brightness control (0-15)
     void setBrightness(uint8_t brightness);
@@ -56,13 +51,6 @@ private:
     MetricDisplay _displays[MAX_DISPLAYS];
     uint8_t _active_count;
 
-    // Indicator LEDs (created if mode is INDICATOR_LED)
-    Led* _led_latency;
-    Led* _led_jitter;
-    Led* _led_loss;
-    Led* _led_download;
-    Led* _led_upload;
-    Adafruit_MCP23X17* _mcp;
 
     // Cycling state (shared timer keeps displays in sync)
     unsigned long _last_cycle_ms;
@@ -75,7 +63,6 @@ private:
     void cyclePacketMetric();
     void cycleBandwidthMetric();
     void syncAllDisplayMetrics();
-    void updateIndicatorLeds();
     void renderAllDisplays();
 
     // Helper to get display index

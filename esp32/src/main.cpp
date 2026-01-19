@@ -38,7 +38,6 @@ String get_network_hostname() {
 // Display system configuration
 static DisplaySystemConfig build_display_config() {
     DisplaySystemConfig config;
-    config.mode = DisplayMode::PREFIX_LETTER;
     config.cycle_interval_ms = 5000;       // 5 second cycle
     config.auto_cycle_enabled = true;      // Auto-cycle by default
     config.base_address = 0x71;            // WAN1 packet=0x71, WAN1 bw=0x72, etc.
@@ -52,12 +51,6 @@ static DisplaySystemConfig build_display_config() {
     config.button2_pin = 15;
     config.long_press_ms = 1000;
 
-    // Indicator LED pins (only used in INDICATOR_LED mode)
-    config.led_latency_pin = 8;
-    config.led_jitter_pin = 9;
-    config.led_loss_pin = 10;
-    config.led_download_pin = 11;
-    config.led_upload_pin = 12;
     return config;
 }
 
