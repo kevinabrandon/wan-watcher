@@ -37,8 +37,8 @@ Led g_led_wan2_red(3, LedPinType::MCP, &g_mcp);
 Led g_led_local_green(4, LedPinType::MCP, &g_mcp);
 Led g_led_local_red(5, LedPinType::MCP, &g_mcp);
 
-// GPIO-based LEDs
-Led g_led_status1(4, LedPinType::GPIO);
+// MCP-based status LED (Ethernet indicator)
+Led g_led_status1(7, LedPinType::MCP, &g_mcp);
 
 // Router timeout tracking (monitors pfSense daemon connection)
 static bool g_router_timed_out = false;
@@ -56,6 +56,21 @@ static const unsigned long POWER_SWITCH_DEBOUNCE_MS = 50;
 
 // Brightness potentiometer
 BrightnessPotentiometer g_brightness_pot;
+
+// Status LED PWM brightness control (GPIO 14 -> transistor base)
+static const uint8_t STATUS_LED_PWM_PIN = 14;
+static const uint8_t STATUS_LED_PWM_CHANNEL = 0;
+static const uint32_t STATUS_LED_PWM_FREQ = 5000;  // 5kHz
+static const uint8_t STATUS_LED_PWM_RESOLUTION = 8;  // 8-bit (0-255)
+static const float STATUS_LED_GAMMA = 1.8f;  // Gamma correction for perceptual linearity
+
+// Convert brightness level (0-15) to PWM value (3-255) with gamma correction
+// Level 0 = 1% duty (dim but visible), Level 15 = 100% duty
+static uint8_t brightness_to_pwm(uint8_t level) {
+    float normalized = level / 15.0f;
+    float gamma_corrected = pow(normalized, STATUS_LED_GAMMA);
+    return 3 + (uint8_t)(gamma_corrected * 252);
+}
 
 // Button callback functions for packet display
 static void on_packet_short_press() {
@@ -314,6 +329,12 @@ void leds_init_with_displays(const DisplaySystemConfig& config) {
     g_led_local_red.begin();
     g_led_status1.begin();
 
+    // Initialize PWM for status LED brightness control
+    ledcSetup(STATUS_LED_PWM_CHANNEL, STATUS_LED_PWM_FREQ, STATUS_LED_PWM_RESOLUTION);
+    ledcAttachPin(STATUS_LED_PWM_PIN, STATUS_LED_PWM_CHANNEL);
+    ledcWrite(STATUS_LED_PWM_CHANNEL, 255);  // Start at full brightness
+    Serial.printf("Status LED PWM initialized on GPIO %d\n", STATUS_LED_PWM_PIN);
+
     // Reset timeout state
     g_router_timed_out = false;
 }
@@ -360,6 +381,9 @@ void set_display_brightness(uint8_t brightness) {
     if (g_display_ok && !g_use_display_manager) {
         g_display.setBrightness(brightness);
     }
+
+    // Apply to status LEDs via PWM with gamma correction
+    ledcWrite(STATUS_LED_PWM_CHANNEL, brightness_to_pwm(brightness));
 }
 
 uint8_t get_display_brightness() {
@@ -376,6 +400,8 @@ void set_displays_on(bool on) {
     if (!on) {
         // Turn off all LEDs when displays are disabled
         all_leds_off();
+        // Turn off status LED PWM
+        ledcWrite(STATUS_LED_PWM_CHANNEL, 0);
     } else {
         // Restore WAN LED states from current metrics
         const WanMetrics& m1 = wan_metrics_get(1);
@@ -384,6 +410,8 @@ void set_displays_on(bool on) {
         wan2_set_leds(m2.state);
         // Local pinger LEDs are restored by the normal loop() update cycle
         // Status LED is managed by loop() based on Ethernet state
+        // Restore status LED PWM brightness with gamma correction
+        ledcWrite(STATUS_LED_PWM_CHANNEL, brightness_to_pwm(g_brightness));
     }
 }
 

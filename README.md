@@ -100,10 +100,11 @@ wan-watcher collects real-time WAN metrics from pfSense (latency, loss, jitter, 
 | MCP 3 | MCP23017 | WAN2 Red LED |
 | MCP 4 | MCP23017 | Local Green LED |
 | MCP 5 | MCP23017 | Local Red LED |
+| MCP 7 | MCP23017 | Ethernet status LED |
 | MCP 13 | MCP23017 | Power switch (INPUT_PULLUP, active low) |
 | MCP 14 | MCP23017 | Packet display button (INPUT_PULLUP) |
 | MCP 15 | MCP23017 | Bandwidth display button (INPUT_PULLUP) |
-| GPIO 4 | ESP32 | Ethernet status LED |
+| GPIO 14 | ESP32 | Status LED PWM brightness (transistor base) |
 | GPIO 36 | ESP32 | Brightness potentiometer (ADC1, analog input) |
 
 **Bicolor LED states:** Green = UP, Both on (yellow/amber) = DEGRADED, Red = DOWN
