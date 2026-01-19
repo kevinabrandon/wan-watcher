@@ -4,12 +4,6 @@
 
 #include <Arduino.h>
 
-// Display mode: how to show metric indicator
-enum class DisplayMode {
-    PREFIX_LETTER,   // First digit shows L/J/P or d/U, 3 digits for value
-    INDICATOR_LED    // Full 4 digits for value, separate LEDs indicate metric
-};
-
 // Packet metrics (displayed on packet display)
 enum class PacketMetric : uint8_t {
     LATENCY = 0,  // L
@@ -55,9 +49,6 @@ enum class MetricsSource : uint8_t {
 
 // Configuration structure
 struct DisplaySystemConfig {
-    // Display mode
-    DisplayMode mode = DisplayMode::PREFIX_LETTER;
-
     // Cycle timing
     unsigned long cycle_interval_ms = 5000;  // 5 seconds
     bool auto_cycle_enabled = true;
@@ -76,11 +67,4 @@ struct DisplaySystemConfig {
 
     // Long press threshold
     unsigned long long_press_ms = 1000;
-
-    // Indicator LED MCP pins (only used in INDICATOR_LED mode)
-    uint8_t led_latency_pin = 8;
-    uint8_t led_jitter_pin = 9;
-    uint8_t led_loss_pin = 10;
-    uint8_t led_download_pin = 11;
-    uint8_t led_upload_pin = 12;
 };

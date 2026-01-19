@@ -137,7 +137,7 @@ void MetricDisplay::write3DigitValue(int value) {
 
 // Timeout threshold uses FRESHNESS_RED_BUFFER_END_MS from freshness_bar.h (60s)
 
-void MetricDisplay::render(DisplayMode mode) {
+void MetricDisplay::render() {
     if (!_ready) return;
 
     // Get last update timestamp based on data source
@@ -168,15 +168,15 @@ void MetricDisplay::render(DisplayMode mode) {
     _display.clear();
 
     if (_type == DisplayType::PACKET) {
-        renderPacketValue(mode);
+        renderPacketValue();
     } else {
-        renderBandwidthValue(mode);
+        renderBandwidthValue();
     }
 
     _display.writeDisplay();
 }
 
-void MetricDisplay::renderPacketValue(DisplayMode mode) {
+void MetricDisplay::renderPacketValue() {
     int value = 0;
     char letter = 'L';
 
@@ -216,18 +216,12 @@ void MetricDisplay::renderPacketValue(DisplayMode mode) {
         }
     }
 
-    if (mode == DisplayMode::PREFIX_LETTER) {
-        // First digit: letter, remaining 3: value
-        writeLetterDigit(letter);
-        write3DigitValue(value);
-    } else {
-        // INDICATOR_LED mode: full 4 digits
-        if (value > 9999) value = 9999;
-        _display.print(value, DEC);
-    }
+    // First digit: letter, remaining 3: value
+    writeLetterDigit(letter);
+    write3DigitValue(value);
 }
 
-void MetricDisplay::renderBandwidthValue(DisplayMode mode) {
+void MetricDisplay::renderBandwidthValue() {
     const WanMetrics& m = wan_metrics_get(_wan_id);
 
     float value = 0.0f;
@@ -244,46 +238,34 @@ void MetricDisplay::renderBandwidthValue(DisplayMode mode) {
             break;
     }
 
-    if (mode == DisplayMode::PREFIX_LETTER) {
-        writeLetterDigit(letter);
+    writeLetterDigit(letter);
 
-        // Format bandwidth in 3 digits
-        // If >= 100: show as integer (e.g., 150 -> "150")
-        // If < 100: show with 1 decimal (e.g., 45.2 -> "452" with decimal point)
-        int display_val;
-        bool show_decimal = false;
+    // Format bandwidth in 3 digits
+    // If >= 100: show as integer (e.g., 150 -> "150")
+    // If < 100: show with 1 decimal (e.g., 45.2 -> "452" with decimal point)
+    int display_val;
+    bool show_decimal = false;
 
-        if (value >= 100.0f) {
-            display_val = (int)value;
-            if (display_val > 999) display_val = 999;
-        } else {
-            // Show one decimal place: 45.2 becomes 452
-            display_val = (int)(value * 10.0f + 0.5f);
-            if (display_val > 999) display_val = 999;
-            show_decimal = true;
-        }
-
-        // Write digits: position 1 (hundreds), 3 (tens), 4 (units)
-        // Decimal point after position 3 when value < 100
-        if (display_val >= 100) {
-            _display.writeDigitNum(1, (display_val / 100) % 10);
-        }
-        if (display_val >= 10) {
-            _display.writeDigitNum(3, (display_val / 10) % 10, show_decimal);
-        } else if (show_decimal) {
-            // Value < 10, need leading zero for decimal (e.g., 0.5 -> " 05" with DP)
-            _display.writeDigitNum(3, 0, true);
-        }
-        _display.writeDigitNum(4, display_val % 10);
+    if (value >= 100.0f) {
+        display_val = (int)value;
+        if (display_val > 999) display_val = 999;
     } else {
-        // INDICATOR_LED mode: full 4 digits with decimal
-        // Format: XXX.X (e.g., 123.4)
-        int int_val = (int)(value * 10.0f + 0.5f);
-        if (int_val > 9999) int_val = 9999;
-
-        _display.writeDigitNum(0, (int_val / 1000) % 10);
-        _display.writeDigitNum(1, (int_val / 100) % 10);
-        _display.writeDigitNum(3, (int_val / 10) % 10, true);  // decimal point
-        _display.writeDigitNum(4, int_val % 10);
+        // Show one decimal place: 45.2 becomes 452
+        display_val = (int)(value * 10.0f + 0.5f);
+        if (display_val > 999) display_val = 999;
+        show_decimal = true;
     }
+
+    // Write digits: position 1 (hundreds), 3 (tens), 4 (units)
+    // Decimal point after position 3 when value < 100
+    if (display_val >= 100) {
+        _display.writeDigitNum(1, (display_val / 100) % 10);
+    }
+    if (display_val >= 10) {
+        _display.writeDigitNum(3, (display_val / 10) % 10, show_decimal);
+    } else if (show_decimal) {
+        // Value < 10, need leading zero for decimal (e.g., 0.5 -> " 05" with DP)
+        _display.writeDigitNum(3, 0, true);
+    }
+    _display.writeDigitNum(4, display_val % 10);
 }

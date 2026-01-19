@@ -26,8 +26,8 @@ public:
     // Turn display on/off (uses HT16K33 display setup register)
     void setDisplayOn(bool on);
 
-    // Render current metric value
-    void render(DisplayMode mode);
+    // Render current metric value (uses prefix letter mode)
+    void render();
 
     // Set which metric to display
     void setPacketMetric(PacketMetric metric);
@@ -52,8 +52,8 @@ private:
     BandwidthMetric _bandwidth_metric;
 
     // Render helpers
-    void renderPacketValue(DisplayMode mode);
-    void renderBandwidthValue(DisplayMode mode);
+    void renderPacketValue();
+    void renderBandwidthValue();
 
     // Write a letter to first digit position
     void writeLetterDigit(char letter);
