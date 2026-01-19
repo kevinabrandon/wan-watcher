@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>wan-watcher</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon-green.svg">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <h1><img src="/favicon-green.svg" alt="">wan-watcher<img src="/favicon-green.svg" alt=""></h1>
+  
+  <p><strong>Hostname:</strong> <code id="hostname"></code><br>
+  <strong>Last update:</strong> <code id="last-update">Never</code> <span id="elapsed-time" style="color:#666;"></span></p>
+
+  <div class="display-panel" id="seg-panel"
+    data-w1-state="down" data-w1-lat="0" data-w1-jit="0" data-w1-loss="100" data-w1-down="0.0" data-w1-up="0.0"
+    data-w2-state="down" data-w2-lat="0" data-w2-jit="0" data-w2-loss="100" data-w2-down="0.0" data-w2-up="0.0"
+    data-lp-state="down" data-lp-lat="0" data-lp-jit="0" data-lp-loss="100"
+  >
+    <!-- Top control row: Power, Brightness, Freshness -->
+    <div class="control-row">
+      <div class="power-toggle-panel">
+        <label class="v-toggle-switch">
+          <span class="on-label">ON</span>
+          <span class="off-label">OFF</span>
+          <input type="checkbox" id="power-checkbox">
+          <span class="v-slider"></span>
+        </label>
+        <span id="switch-status" class="switch-status"></span>
+      </div>
+      <div class="brightness-panel">
+        <div class="dial-knob" id="brightness-dial" title="Drag to adjust brightness"></div>
+        <span id="brightness-val">8</span>
+        <span id="brightness-pot-status" class="switch-status"></span>
+      </div>
+      <div class="freshness-bar" id="freshness-bar"></div>
+    </div>
+    <!-- Main grid: Labels and data rows -->
+    <div class="display-grid">
+      <!-- Header row -->
+      <div></div>
+      <div class="col-header">Status</div>
+      <div class="col-header">L/J/P</div>
+      <div class="col-header">d/U</div>
+      <!-- WAN1 row -->
+      <div class="row-label">WAN1</div>
+      <div class="led-group"><div class="state-led" id="w1-led"></div></div>
+      <div class="seg-display pkt-display" id="w1-pkt"></div>
+      <div class="seg-display bw-display" id="w1-bw"></div>
+      <!-- WAN2 row -->
+      <div class="row-label">WAN2</div>
+      <div class="led-group"><div class="state-led" id="w2-led"></div></div>
+      <div class="seg-display pkt-display" id="w2-pkt"></div>
+      <div class="seg-display bw-display" id="w2-bw"></div>
+      <!-- Local row -->
+      <div class="row-label">Local</div>
+      <div class="led-group"><div class="state-led" id="lp-led"></div></div>
+      <div class="seg-display pkt-display" id="lp-pkt"></div>
+      <div></div>
+    </div>
+  </div>
+
+  <h3>Network Metrics</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>Interface</th>
+        <th>Description</th>
+        <th>State</th>
+        <th>Monitor IP</th>
+        <th>Gateway IP</th>
+        <th>Local IP</th>
+        <th>Loss</th>
+        <th>Latency</th>
+        <th>Jitter</th>
+        <th>Download</th>
+        <th>Upload</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>WAN1</td>
+        <td>PeakWifi</td>
+        <td id="w1-state">&#x1F534; DOWN</td>
+        <td id="w1-mon"></td>
+        <td id="w1-gw"></td>
+        <td id="w1-lip"></td>
+        <td id="w1-loss">100%</td>
+        <td id="w1-lat">0 ms</td>
+        <td id="w1-jit">0 ms</td>
+        <td id="w1-down">0.0 Mbps</td>
+        <td id="w1-up">0.0 Mbps</td>
+      </tr>
+      <tr>
+        <td>WAN2</td>
+        <td>Starlink</td>
+        <td id="w2-state">&#x1F534; DOWN</td>
+        <td id="w2-mon"></td>
+        <td id="w2-gw"></td>
+        <td id="w2-lip"></td>
+        <td id="w2-loss">100%</td>
+        <td id="w2-lat">0 ms</td>
+        <td id="w2-jit">0 ms</td>
+        <td id="w2-down">0.0 Mbps</td>
+        <td id="w2-up">0.0 Mbps</td>
+      </tr>
+      <tr>
+        <td>Local</td>
+        <td id="hostname-table"></td>
+        <td id="lp-state">&#x1F534; DOWN</td>
+        <td id="lp-mon"></td>
+        <td id="lp-gw"></td>
+        <td id="lp-lip"></td>
+        <td id="lp-loss">100%</td>
+        <td id="lp-lat">0 ms</td>
+        <td id="lp-jit">0 ms</td>
+        <td>-</td>
+        <td>-</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <script src="script.js"></script>
+</body>
+</html>

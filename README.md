@@ -6,7 +6,7 @@ wan-watcher collects real-time WAN metrics from pfSense (latency, loss, jitter, 
 
 ## What it looks like
 
-![wan-watcher panel](./wan-watcher.png)
+![wan-watcher panel](./images/wan-watcher.png)
 
 ---
 
@@ -127,6 +127,8 @@ wan-watcher collects real-time WAN metrics from pfSense (latency, loss, jitter, 
 wan-watcher/
   pf/            # pfSense scripts (cron polling, dpinger, usage)
   esp32/         # ESP32 firmware (LEDs, 7-seg, API endpoints)
+    data/        # Web UI files (HTML, CSS, JS)
+  images/        # Screenshots and photos
   README.md
   .gitignore
 ```
@@ -348,9 +350,36 @@ Set the display brightness (overrides potentiometer until dial is turned).
 - No authentication by default
 - Do not expose the ESP32 API to untrusted networks
 
+---
+
+## ESP32 Firmware Development/Deployment
+
+The ESP32 firmware includes a web interface. For better development experience, the HTML, CSS, and JavaScript for the web UI are now located in the `esp32/data/` directory.
+
+### Editing the Web UI
+
+You can directly edit the `index.html`, `styles.css`, and `script.js` files located in `esp32/data/`. Use your preferred web development tools for these files.
+
+### Deployment Steps
+
+When making changes to the ESP32 project, you will use two different PlatformIO commands depending on what you have modified:
+
+1.  **To upload Web UI changes (HTML, CSS, JavaScript):**
+    After modifying any files in `esp32/data/`, you need to upload the filesystem image to the ESP32.
+    ```bash
+    pio run -t uploadfs
+    ```
+
+2.  **To upload Firmware changes (C++ code):**
+    After modifying any C++ source files (e.g., in `esp32/src/`), you need to compile and upload the new firmware.
+    ```bash
+    pio run -e esp32-poe-iso -t upload
+    ```
+
+**For a full deployment (both firmware and web UI changes), it's recommended to run `uploadfs` first, then `upload`.**
+
 ## TODOs:
 
-- make a matching web ui toggle switch to look like the hardware toggle
 - include photos of the pysical panel
 
 ## License

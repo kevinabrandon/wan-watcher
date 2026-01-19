@@ -1,0 +1,405 @@
+(function(){
+  // === Shared state ===
+  var updateTime = null;
+  var el = document.getElementById('last-update');
+  if (el && el.dataset.iso) {
+    updateTime = new Date(el.dataset.iso);
+    if (!isNaN(updateTime)) {
+      el.textContent = updateTime.toLocaleString();
+    } else {
+      updateTime = null;
+    }
+  }
+
+  // === Freshness bar (24 discrete LEDs matching hardware) ===
+  var bar = document.getElementById('freshness-bar');
+  var elapsedEl = document.getElementById('elapsed-time');
+  var leds = [];
+
+  // Timing constants (defaults, updated from API)
+  var F = {
+    greenFillEnd: 15, greenBufferEnd: 20,
+    yellowFillEnd: 35, yellowBufferEnd: 40,
+    redFillEnd: 55, redBufferEnd: 60,
+    fillDuration: 15, ledCount: 24
+  };
+
+  // Create LED elements
+  for (var i = 0; i < F.ledCount; i++) {
+    var led = document.createElement('div');
+    led.className = 'freshness-led';
+    bar.appendChild(led);
+    leds.push(led);
+  }
+
+  function updateFreshness() {
+    // Use fractional seconds for smooth LED transitions
+    var elapsedMs = updateTime ? Date.now() - updateTime.getTime() : 999000;
+    var elapsed = elapsedMs / 1000; // fractional seconds for LED calc
+    var greenCount = 0, yellowCount = 0, redCount = 0;
+
+    if (elapsed >= F.redBufferEnd) {
+      // >60s: All red, blinking
+      redCount = F.ledCount;
+      bar.classList.add('blink');
+    } else {
+      bar.classList.remove('blink');
+      if (elapsed < F.greenFillEnd) {
+        // 0-15s: Green fills
+        greenCount = Math.floor((elapsed * F.ledCount) / F.fillDuration);
+      } else if (elapsed < F.greenBufferEnd) {
+        // 15-20s: Buffer - all green
+        greenCount = F.ledCount;
+      } else if (elapsed < F.yellowFillEnd) {
+        // 20-35s: Yellow overwrites green
+        var yellowElapsed = elapsed - F.greenBufferEnd;
+        yellowCount = Math.floor((yellowElapsed * F.ledCount) / F.fillDuration);
+        greenCount = F.ledCount - yellowCount;
+      } else if (elapsed < F.yellowBufferEnd) {
+        // 35-40s: Buffer - all yellow
+        yellowCount = F.ledCount;
+      } else if (elapsed < F.redFillEnd) {
+        // 40-55s: Red overwrites yellow
+        var redElapsed = elapsed - F.yellowBufferEnd;
+        redCount = Math.floor((redElapsed * F.ledCount) / F.fillDuration);
+        yellowCount = F.ledCount - redCount;
+      } else {
+        // 55-60s: Buffer - all red
+        redCount = F.ledCount;
+      }
+    }
+
+    // Update LED colors (red on left, then yellow, then green, then off)
+    for (var i = 0; i < F.ledCount; i++) {
+      var led = leds[i];
+      led.className = 'freshness-led';
+      if (redCount > 0 && i < redCount) {
+        led.classList.add('red');
+      } else if (yellowCount > 0 && i < redCount + yellowCount) {
+        led.classList.add('yellow');
+      } else if (greenCount > 0 && i < redCount + yellowCount + greenCount) {
+        led.classList.add('green');
+      }
+    }
+
+    elapsedEl.textContent = '(' + Math.floor(elapsed) + 's ago)';
+  }
+  updateFreshness();
+  setInterval(updateFreshness, 250); // 250ms is sufficient for 625ms LED transitions
+
+  // === 7-segment displays ===
+  var SEG={
+    '0':'abcdef','1':'bc','2':'abdeg','3':'abcdg','4':'bcfg','5':'acdfg',
+    '6':'acdefg','7':'abc','8':'abcdefg','9':'abcdfg',
+    'L':'def','J':'bcde','P':'abefg','d':'bcdeg','U':'bcdef','-':'g',' ':''
+  };
+  function mkDigit(){
+    var d=document.createElement('div');d.className='digit';
+    ['a','b','c','d','e','f','g'].forEach(function(s){
+      var e=document.createElement('div');e.className='seg seg-'+s;d.appendChild(e);
+    });
+    var dp=document.createElement('div');dp.className='seg-dp';d.appendChild(dp);
+    return d;
+  }
+  function initDisplay(id){
+    var el=document.getElementById(id);
+    for(var i=0;i<4;i++)el.appendChild(mkDigit());
+  }
+  function setDisplay(id,prefix,val){
+    var el=document.getElementById(id);
+    var digits=el.querySelectorAll('.digit');
+    var v=val.toString();
+    var hasDP=v.indexOf('.')>=0;
+    v=v.replace('.','');
+    while(v.length<3)v=' '+v;
+    v=v.substring(v.length-3);
+    var chars=[prefix,v[0],v[1],v[2]];
+    var dps=[false,false,hasDP&&v.length>=2,false];
+    for(var i=0;i<4;i++){
+      var c=chars[i];
+      var segs=SEG[c]||'';
+      var digit=digits[i];
+      ['a','b','c','d','e','f','g'].forEach(function(seg){
+        digit.querySelector('.seg-'+seg).classList.toggle('on',segs.indexOf(seg)>=0);
+      });
+      digit.querySelector('.seg-dp').classList.toggle('on',dps[i]);
+    }
+  }
+  function setDisplayDashes(id){
+    var el=document.getElementById(id);
+    var digits=el.querySelectorAll('.digit');
+    for(var i=0;i<4;i++){
+      var digit=digits[i];
+      ['a','b','c','d','e','f','g'].forEach(function(seg){
+        digit.querySelector('.seg-'+seg).classList.toggle('on',seg==='g');
+      });
+      digit.querySelector('.seg-dp').classList.toggle('on',false);
+    }
+  }
+  ['w1-pkt','w1-bw','w2-pkt','w2-bw','lp-pkt'].forEach(initDisplay);
+
+  var pktIdx=0,bwIdx=0;
+  var P=document.getElementById('seg-panel').dataset;
+
+  // === Stale state helper ===
+  function isStale(){
+    if(!updateTime)return true;
+    var elapsed=(Date.now()-updateTime.getTime())/1000;
+    return elapsed>=F.redBufferEnd;
+  }
+
+  // === State LED update (single bicolor LED per row) ===
+  function setLeds(prefix,state,stale){
+    var led=document.getElementById(prefix+'-led');
+    if(stale){
+      led.className='state-led blink-red';
+    }else if(state==='up'){
+      led.className='state-led green';
+    }else if(state==='degraded'){
+      led.className='state-led yellow';
+    }else{
+      led.className='state-led red';
+    }
+  }
+  function updLeds(){
+    var stale=isStale();
+    setLeds('w1',P.w1State,stale);
+    setLeds('w2',P.w2State,stale);
+    setLeds('lp',P.lpState,false);  // Local pinger doesn't depend on pfSense freshness
+  }
+  updLeds();
+
+  function updDisp(){
+    var pktM=['L','J','P'],bwM=['d','U'];
+    var pm=pktM[pktIdx],bm=bwM[bwIdx];
+    var stale=isStale();
+    // Show dashes when stale or when WAN is down
+    if(stale||P.w1State==='down'){
+      setDisplayDashes('w1-pkt');setDisplayDashes('w1-bw');
+    }else{
+      setDisplay('w1-pkt',pm,[P.w1Lat,P.w1Jit,P.w1Loss][pktIdx]);
+      setDisplay('w1-bw',bm,[P.w1Down,P.w1Up][bwIdx]);
+    }
+    if(stale||P.w2State==='down'){
+      setDisplayDashes('w2-pkt');setDisplayDashes('w2-bw');
+    }else{
+      setDisplay('w2-pkt',pm,[P.w2Lat,P.w2Jit,P.w2Loss][pktIdx]);
+      setDisplay('w2-bw',bm,[P.w2Down,P.w2Up][bwIdx]);
+    }
+    // Local pinger doesn't depend on pfSense freshness
+    if(P.lpState==='down'){
+      setDisplayDashes('lp-pkt');
+    }else{
+      setDisplay('lp-pkt',pm,[P.lpLat,P.lpJit,P.lpLoss][pktIdx]);
+    }
+  }
+  updDisp();
+  document.querySelectorAll('.pkt-display').forEach(function(e){
+    e.addEventListener('click',function(){pktIdx=(pktIdx+1)%3;updDisp();});
+  });
+  document.querySelectorAll('.bw-display').forEach(function(e){
+    e.addEventListener('click',function(){bwIdx=(bwIdx+1)%2;updDisp();});
+  });
+  setInterval(function(){pktIdx=(pktIdx+1)%3;bwIdx=(bwIdx+1)%2;updDisp();},5000);
+
+  // === State emoji helper ===
+  function stateHtml(s){
+    if(s==='up')return'\u{1F7E2} UP';
+    if(s==='degraded')return'\u{1F7E1} DEGRADED';
+    return'\u{1F534} DOWN';
+  }
+
+  // === Fetch data ===
+  function fetchData(){
+    fetch('/api/status').then(function(r){return r.json();}).then(function(d){
+      // Update 7-segment data
+      P.w1State=d.wan1.state;P.w1Lat=d.wan1.latency_ms;P.w1Jit=d.wan1.jitter_ms;P.w1Loss=d.wan1.loss_pct;
+      P.w1Down=d.wan1.down_mbps.toFixed(1);P.w1Up=d.wan1.up_mbps.toFixed(1);
+      P.w2State=d.wan2.state;P.w2Lat=d.wan2.latency_ms;P.w2Jit=d.wan2.jitter_ms;P.w2Loss=d.wan2.loss_pct;
+      P.w2Down=d.wan2.down_mbps.toFixed(1);P.w2Up=d.wan2.up_mbps.toFixed(1);
+      P.lpState=d.local.state;P.lpLat=d.local.latency_ms;P.lpJit=d.local.jitter_ms;P.lpLoss=d.local.loss_pct;
+      updLeds();
+      updDisp();
+      // Update timestamp
+      if(d.timestamp){
+        updateTime=new Date(d.timestamp);
+        var el=document.getElementById('last-update');
+        if(el)el.textContent=updateTime.toLocaleString();
+      }
+      // Update freshness timing constants from API
+      if(d.freshness){
+        F.greenFillEnd=d.freshness.green_fill_end;
+        F.greenBufferEnd=d.freshness.green_buffer_end;
+        F.yellowFillEnd=d.freshness.yellow_fill_end;
+        F.yellowBufferEnd=d.freshness.yellow_buffer_end;
+        F.redFillEnd=d.freshness.red_fill_end;
+        F.redBufferEnd=d.freshness.red_buffer_end;
+        F.fillDuration=d.freshness.fill_duration;
+      }
+      // Update table cells
+      var $=function(id){return document.getElementById(id);};
+      $('w1-state').innerHTML=stateHtml(d.wan1.state);
+      $('w1-mon').textContent=d.wan1.monitor_ip||'';
+      $('w1-gw').textContent=d.wan1.gateway_ip||'';
+      $('w1-lip').textContent=d.wan1.local_ip||'';
+      $('w1-loss').textContent=d.wan1.loss_pct+'%';
+      $('w1-lat').textContent=d.wan1.latency_ms+' ms';
+      $('w1-jit').textContent=d.wan1.jitter_ms+' ms';
+      $('w1-down').textContent=d.wan1.down_mbps.toFixed(1)+' Mbps';
+      $('w1-up').textContent=d.wan1.up_mbps.toFixed(1)+' Mbps';
+      $('w2-state').innerHTML=stateHtml(d.wan2.state);
+      $('w2-mon').textContent=d.wan2.monitor_ip||'';
+      $('w2-gw').textContent=d.wan2.gateway_ip||'';
+      $('w2-lip').textContent=d.wan2.local_ip||'';
+      $('w2-loss').textContent=d.wan2.loss_pct+'%';
+      $('w2-lat').textContent=d.wan2.latency_ms+' ms';
+      $('w2-jit').textContent=d.wan2.jitter_ms+' ms';
+      $('w2-down').textContent=d.wan2.down_mbps.toFixed(1)+' Mbps';
+      $('w2-up').textContent=d.wan2.up_mbps.toFixed(1)+' Mbps';
+      $('lp-state').innerHTML=stateHtml(d.local.state);
+      $('lp-gw').textContent=d.router_ip||'';
+      $('lp-loss').textContent=d.local.loss_pct+'%';
+      $('lp-lat').textContent=d.local.latency_ms+' ms';
+      $('lp-jit').textContent=d.local.jitter_ms+' ms';
+    }).catch(function(e){console.error('Fetch error:',e);});
+  }
+  fetchData(); // Run immediately
+  setInterval(fetchData,5000); // Then every 5 seconds
+
+  // === Brightness dial control ===
+  var brightnessDial = document.getElementById('brightness-dial');
+  var brightnessVal = document.getElementById('brightness-val');
+  var brightnessPotStatus = document.getElementById('brightness-pot-status');
+  var currentBrightness = 8;
+  var potLevel = 8;
+
+  // Dial rotation: 0=min (-135deg), 15=max (+135deg), total 270deg range
+  function brightnessToAngle(b) { return -135 + (b / 15) * 270; }
+  function angleToBrightness(a) {
+    var b = Math.round(((a + 135) / 270) * 15);
+    return Math.max(0, Math.min(15, b));
+  }
+
+  function updateDialRotation() {
+    brightnessDial.style.transform = 'rotate(' + brightnessToAngle(currentBrightness) + 'deg)';
+  }
+
+  function updateBrightnessUI() {
+    brightnessVal.textContent = currentBrightness;
+    updateDialRotation();
+
+    // Show pot level and override status
+    var potText = 'Pot: ' + potLevel;
+    if (currentBrightness !== potLevel) {
+      brightnessPotStatus.textContent = potText;
+      brightnessPotStatus.style.color = '#f39c12';
+    } else {
+      brightnessPotStatus.textContent = potText;
+      brightnessPotStatus.style.color = '#999';
+    }
+  }
+
+  function fetchBrightnessState() {
+    fetch('/api/brightness').then(function(r) { return r.json(); }).then(function(d) {
+      currentBrightness = d.brightness;
+      potLevel = d.pot_level;
+      updateBrightnessUI();
+    }).catch(function(e) { console.error('Brightness fetch error:', e); });
+  }
+
+  function postBrightness(val) {
+    currentBrightness = parseInt(val);
+    updateBrightnessUI();
+    fetch('/api/brightness', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({brightness: currentBrightness})
+    }).catch(function(e) { console.error('Brightness error:', e); });
+  }
+
+  // Dial drag handling
+  var dialDragging = false;
+  var dialCenterX, dialCenterY;
+
+  function getAngleFromEvent(e) {
+    var x = (e.touches ? e.touches[0].clientX : e.clientX) - dialCenterX;
+    var y = (e.touches ? e.touches[0].clientY : e.clientY) - dialCenterY;
+    var angle = Math.atan2(x, -y) * (180 / Math.PI);
+    return Math.max(-135, Math.min(135, angle));
+  }
+
+  brightnessDial.addEventListener('mousedown', startDrag);
+  brightnessDial.addEventListener('touchstart', startDrag);
+
+  function startDrag(e) {
+    e.preventDefault();
+    dialDragging = true;
+    var rect = brightnessDial.getBoundingClientRect();
+    dialCenterX = rect.left + rect.width / 2;
+    dialCenterY = rect.top + rect.height / 2;
+    document.addEventListener('mousemove', onDrag);
+    document.addEventListener('touchmove', onDrag);
+    document.addEventListener('mouseup', endDrag);
+    document.addEventListener('touchend', endDrag);
+  }
+
+  function onDrag(e) {
+    if (!dialDragging) return;
+    var angle = getAngleFromEvent(e);
+    var newBrightness = angleToBrightness(angle);
+    if (newBrightness !== currentBrightness) {
+      currentBrightness = newBrightness;
+      updateBrightnessUI();
+    }
+  }
+
+  function endDrag(e) {
+    if (dialDragging) {
+      dialDragging = false;
+      postBrightness(currentBrightness);
+    }
+    document.removeEventListener('mousemove', onDrag);
+    document.removeEventListener('touchmove', onDrag);
+    document.removeEventListener('mouseup', endDrag);
+    document.removeEventListener('touchend', endDrag);
+  }
+
+  // Load initial brightness and poll for changes
+  fetchBrightnessState();
+  setInterval(fetchBrightnessState, 2000);
+
+  // === Display power control ===
+  var powerCheckbox = document.getElementById('power-checkbox');
+  var switchStatus = document.getElementById('switch-status');
+  var displaysOn = true;
+  var switchPosition = true;
+
+  function updatePowerUI() {
+    powerCheckbox.checked = displaysOn;
+    // Show switch position (color indicates override)
+    switchStatus.textContent = 'Switch: ' + (switchPosition ? 'ON' : 'OFF');
+    switchStatus.style.color = (displaysOn !== switchPosition) ? '#f39c12' : '#999';
+  }
+
+  function fetchPowerState() {
+    fetch('/api/display-power').then(function(r) { return r.json(); }).then(function(d) {
+      displaysOn = d.on;
+      switchPosition = d.switch_position;
+      updatePowerUI();
+    }).catch(function(e) { console.error('Power fetch error:', e); });
+  }
+
+  powerCheckbox.addEventListener('change', function() {
+    displaysOn = powerCheckbox.checked;
+    updatePowerUI(); // Update optimistically
+    fetch('/api/display-power', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({on: displaysOn})
+    }).catch(function(e) { console.error('Power toggle error:', e); });
+  });
+
+  // Load initial power state and poll for changes
+  fetchPowerState();
+  setInterval(fetchPowerState, 2000);
+})();
