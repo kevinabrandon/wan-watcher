@@ -348,6 +348,11 @@ Set the display brightness (overrides potentiometer until dial is turned).
 - No authentication by default
 - Do not expose the ESP32 API to untrusted networks
 
+## TODOs:
+
+- make a matching web ui toggle switch to look like the hardware toggle
+- include photos of the pysical panel
+
 ## License
 
 MIT
