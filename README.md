@@ -6,7 +6,7 @@ wan-watcher collects real-time WAN metrics from pfSense (latency, loss, jitter, 
 
 ## What it looks like
 
-![wan-watcher panel](./wan-watcher.png)
+![wan-watcher panel](./images/wan-watcher.png)
 
 ---
 
@@ -128,6 +128,7 @@ wan-watcher/
   pf/            # pfSense scripts (cron polling, dpinger, usage)
   esp32/         # ESP32 firmware (LEDs, 7-seg, API endpoints)
     data/        # Web UI files (HTML, CSS, JS)
+  images/        # Screenshots and photos
   README.md
   .gitignore
 ```
@@ -379,7 +380,6 @@ When making changes to the ESP32 project, you will use two different PlatformIO 
 
 ## TODOs:
 
-- make a matching web ui toggle switch to look like the hardware toggle
 - include photos of the pysical panel
 
 ## License
