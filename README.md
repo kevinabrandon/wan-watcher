@@ -127,9 +127,9 @@ wan-watcher collects real-time WAN metrics from pfSense (latency, loss, jitter, 
 
 This diagram provides a comprehensive overview of the electrical connections and components within the WAN Watcher system.
 
-![WAN Watcher Circuit Diagram](./images/circuit-diagram.svg)
+![WAN Watcher Circuit Diagram](./docs/diagrams/wan-watcher-circuit.drawio.svg)
 
-*You can find the diagrams.net (draw.io) source file for this diagram at `./images/circuit-diagram.drawio`.*
+*You can find the diagrams.net (draw.io) source file for this diagram at `./docs/diagrams/wan-watcher-circuit.drawio`.*
 
 ## Repository Structure
 
@@ -138,9 +138,11 @@ wan-watcher/
   pf/            # pfSense scripts (cron polling, dpinger, usage)
   esp32/         # ESP32 firmware (LEDs, 7-seg, API endpoints)
     data/        # Web UI files (HTML, CSS, JS)
+  docs/
+    diagrams/    # Circuit diagrams
+      wan-watcher-circuit.drawio
+      wan-watcher-circuit.drawio.svg
   images/        # Screenshots and photos
-    circuit-diagram.drawio # Source for circuit diagram (diagrams.net XML)
-    circuit-diagram.svg    # Rendered circuit diagram
   README.md
   .gitignore
 ```
