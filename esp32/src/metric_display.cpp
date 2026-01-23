@@ -222,18 +222,16 @@ void MetricDisplay::renderPacketValue() {
 }
 
 void MetricDisplay::renderBandwidthValue() {
-    const WanMetrics& m = wan_metrics_get(_wan_id);
-
     float value = 0.0f;
     char letter = 'd';
 
     switch (_bandwidth_metric) {
         case BandwidthMetric::DOWNLOAD:
-            value = m.down_mbps;
+            value = wan_metrics_get_down(_wan_id);
             letter = 'd';
             break;
         case BandwidthMetric::UPLOAD:
-            value = m.up_mbps;
+            value = wan_metrics_get_up(_wan_id);
             letter = 'U';
             break;
     }

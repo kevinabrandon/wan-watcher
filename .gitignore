@@ -4,6 +4,9 @@ esp32/.vscode/
 esp32/.clang_complete
 esp32/.gcc-flags.json
 
+# Generated at build time (see extra_scripts/update_version.py)
+esp32/data/docs/
+
 # OS junk
 .DS_Store
 Thumbs.db

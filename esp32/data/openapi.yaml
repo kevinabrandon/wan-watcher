@@ -1,0 +1,600 @@
+openapi: 3.0.3
+info:
+  title: WAN Watcher ESP32 API
+  description: |
+    API for the WAN Watcher ESP32 device. This device monitors dual WAN connections
+    and displays real-time network metrics on a 7-segment LED display.
+
+    The ESP32 receives WAN metrics from a pfSense daemon and provides local network
+    monitoring via its own pinger.
+  version: 1.0.0-3-g0d52fd1
+  contact:
+    url: https://github.com/kevinabrandon/wan-watcher
+
+servers:
+  - url: /
+    description: ESP32 device
+
+tags:
+  - name: Status
+    description: Get current device and network status
+  - name: Display
+    description: Control display settings
+  - name: Bandwidth
+    description: Configure bandwidth display source
+  - name: pfSense Integration
+    description: |
+      Internal endpoints used by the pfSense daemon (`wan_watcher_daemon.sh`).
+      These endpoints are not intended for general use. The daemon pushes WAN
+      metrics to the ESP32 every 15 seconds. Manual calls may be useful for
+      testing but will be overwritten by the next daemon update.
+  - name: Assets
+    description: Static assets (favicons)
+
+paths:
+  /api/status:
+    get:
+      tags:
+        - Status
+      summary: Get current status
+      description: |
+        Returns the current status of all monitored interfaces including WAN1, WAN2,
+        and the local network connection. Also includes display freshness timing info.
+      responses:
+        '200':
+          description: Current device and network status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatusResponse'
+
+  /api/brightness:
+    get:
+      tags:
+        - Display
+      summary: Get brightness level
+      description: Returns the current display brightness and potentiometer level.
+      responses:
+        '200':
+          description: Current brightness settings
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BrightnessResponse'
+    post:
+      tags:
+        - Display
+      summary: Set brightness level
+      description: Sets the display brightness (0-15 scale).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BrightnessRequest'
+      responses:
+        '200':
+          description: Brightness updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BrightnessSetResponse'
+        '400':
+          description: Invalid brightness value
+
+  /api/display-power:
+    get:
+      tags:
+        - Display
+      summary: Get display power state
+      description: Returns the current display power state and physical switch position.
+      responses:
+        '200':
+          description: Current power state
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DisplayPowerResponse'
+    post:
+      tags:
+        - Display
+      summary: Set display power state
+      description: Turns the display on or off via software override.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DisplayPowerRequest'
+      responses:
+        '200':
+          description: Power state updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DisplayPowerSetResponse'
+
+  /api/bw-source:
+    get:
+      tags:
+        - Bandwidth
+      summary: Get bandwidth display source
+      description: Returns the current bandwidth time window being displayed.
+      responses:
+        '200':
+          description: Current bandwidth source
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BwSourceResponse'
+    post:
+      tags:
+        - Bandwidth
+      summary: Set bandwidth display source
+      description: Sets which bandwidth time window to display (15s instant, 1m, 5m, or 15m EWMA).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BwSourceRequest'
+      responses:
+        '200':
+          description: Bandwidth source updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BwSourceSetResponse'
+        '400':
+          description: Invalid source value
+
+  /api/wans:
+    post:
+      tags:
+        - pfSense Integration
+      summary: Update WAN metrics (pfSense daemon only)
+      description: |
+        **Internal endpoint - used by the pfSense daemon only.**
+
+        This endpoint receives WAN metrics pushed by `wan_watcher_daemon.sh` running
+        on the pfSense router. The daemon calls this endpoint every 15 seconds with
+        current metrics for both WAN interfaces.
+
+        Manual calls to this endpoint may be useful for testing, but any values set
+        will be overwritten by the next daemon update cycle.
+
+        The daemon source is located at `pf/wan_watcher_daemon.sh` in the repository.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WansUpdateRequest'
+      responses:
+        '200':
+          description: Metrics updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WansUpdateResponse'
+        '400':
+          description: Invalid JSON or missing required fields
+
+  /favicon.svg:
+    get:
+      tags:
+        - Assets
+      summary: Get dynamic favicon
+      description: Returns the green favicon SVG (default).
+      responses:
+        '200':
+          description: SVG favicon
+          content:
+            image/svg+xml:
+              schema:
+                type: string
+
+  /favicon-green.svg:
+    get:
+      tags:
+        - Assets
+      summary: Get green favicon
+      description: Returns the green (UP state) favicon SVG.
+      responses:
+        '200':
+          description: Green SVG favicon
+          content:
+            image/svg+xml:
+              schema:
+                type: string
+
+  /favicon-yellow.svg:
+    get:
+      tags:
+        - Assets
+      summary: Get yellow favicon
+      description: Returns the yellow (DEGRADED state) favicon SVG.
+      responses:
+        '200':
+          description: Yellow SVG favicon
+          content:
+            image/svg+xml:
+              schema:
+                type: string
+
+  /favicon-red.svg:
+    get:
+      tags:
+        - Assets
+      summary: Get red favicon
+      description: Returns the red (DOWN state) favicon SVG.
+      responses:
+        '200':
+          description: Red SVG favicon
+          content:
+            image/svg+xml:
+              schema:
+                type: string
+
+components:
+  schemas:
+    WanState:
+      type: string
+      enum:
+        - up
+        - degraded
+        - down
+      description: Connection state
+
+    WanMetrics:
+      type: object
+      properties:
+        state:
+          $ref: '#/components/schemas/WanState'
+        loss_pct:
+          type: integer
+          minimum: 0
+          maximum: 100
+          description: Packet loss percentage
+        latency_ms:
+          type: integer
+          minimum: 0
+          maximum: 65535
+          description: Latency in milliseconds
+        jitter_ms:
+          type: integer
+          minimum: 0
+          maximum: 65535
+          description: Jitter in milliseconds
+        down_mbps:
+          type: number
+          format: float
+          description: Download speed (15s instant sample)
+        up_mbps:
+          type: number
+          format: float
+          description: Upload speed (15s instant sample)
+        down_1m:
+          type: number
+          format: float
+          description: Download speed (1 minute EWMA)
+        down_5m:
+          type: number
+          format: float
+          description: Download speed (5 minute EWMA)
+        down_15m:
+          type: number
+          format: float
+          description: Download speed (15 minute EWMA)
+        up_1m:
+          type: number
+          format: float
+          description: Upload speed (1 minute EWMA)
+        up_5m:
+          type: number
+          format: float
+          description: Upload speed (5 minute EWMA)
+        up_15m:
+          type: number
+          format: float
+          description: Upload speed (15 minute EWMA)
+        local_ip:
+          type: string
+          format: ipv4
+          description: Local interface IP address
+        gateway_ip:
+          type: string
+          format: ipv4
+          description: Gateway IP address
+        monitor_ip:
+          type: string
+          format: ipv4
+          description: IP address being monitored for health
+
+    LocalMetrics:
+      type: object
+      properties:
+        state:
+          $ref: '#/components/schemas/WanState'
+        loss_pct:
+          type: integer
+          minimum: 0
+          maximum: 100
+        latency_ms:
+          type: integer
+          minimum: 0
+          maximum: 65535
+        jitter_ms:
+          type: integer
+          minimum: 0
+          maximum: 65535
+        local_ip:
+          type: string
+          format: ipv4
+        monitor_ip:
+          type: string
+          format: ipv4
+
+    FreshnessInfo:
+      type: object
+      description: |
+        Timing info for the freshness LED bar. The bar shows how stale the pfSense data is
+        using a color progression: green (fresh) -> yellow (aging) -> red (stale).
+        Each color zone has a "fill" period where LEDs light up, followed by a "buffer"
+        period before transitioning to the next color.
+      properties:
+        green_fill_end:
+          type: number
+          format: float
+          description: Seconds after last update when green fill zone ends
+        green_buffer_end:
+          type: number
+          format: float
+          description: Seconds after last update when green buffer zone ends (transition to yellow)
+        yellow_fill_end:
+          type: number
+          format: float
+          description: Seconds after last update when yellow fill zone ends
+        yellow_buffer_end:
+          type: number
+          format: float
+          description: Seconds after last update when yellow buffer zone ends (transition to red)
+        red_fill_end:
+          type: number
+          format: float
+          description: Seconds after last update when red fill zone ends
+        red_buffer_end:
+          type: number
+          format: float
+          description: Seconds after last update when red buffer zone ends (data considered stale, blinking)
+        fill_duration:
+          type: number
+          format: float
+          description: Duration in seconds for each color's fill animation
+        led_count:
+          type: integer
+          description: Number of LEDs in the freshness bar (24)
+
+    StatusResponse:
+      type: object
+      properties:
+        hostname:
+          type: string
+          description: ESP32 hostname
+        timestamp:
+          type: string
+          format: date-time
+          description: Last update timestamp from pfSense
+        router_ip:
+          type: string
+          format: ipv4
+          description: Router IP address
+        wan1:
+          $ref: '#/components/schemas/WanMetrics'
+        wan2:
+          $ref: '#/components/schemas/WanMetrics'
+        local:
+          $ref: '#/components/schemas/LocalMetrics'
+        freshness:
+          $ref: '#/components/schemas/FreshnessInfo'
+
+    WanUpdatePayload:
+      type: object
+      properties:
+        state:
+          $ref: '#/components/schemas/WanState'
+        loss_pct:
+          type: integer
+          minimum: 0
+          maximum: 100
+        latency_ms:
+          type: integer
+          minimum: 0
+          maximum: 65535
+        jitter_ms:
+          type: integer
+          minimum: 0
+          maximum: 65535
+        down_mbps:
+          type: number
+          format: float
+        up_mbps:
+          type: number
+          format: float
+        down_1m:
+          type: number
+          format: float
+        down_5m:
+          type: number
+          format: float
+        down_15m:
+          type: number
+          format: float
+        up_1m:
+          type: number
+          format: float
+        up_5m:
+          type: number
+          format: float
+        up_15m:
+          type: number
+          format: float
+        local_ip:
+          type: string
+          format: ipv4
+        gateway_ip:
+          type: string
+          format: ipv4
+        monitor_ip:
+          type: string
+          format: ipv4
+
+    WansUpdateRequest:
+      type: object
+      properties:
+        router_ip:
+          type: string
+          format: ipv4
+          description: Router IP address
+        timestamp:
+          type: string
+          format: date-time
+          description: Timestamp of metrics collection
+        wan1:
+          $ref: '#/components/schemas/WanUpdatePayload'
+        wan2:
+          $ref: '#/components/schemas/WanUpdatePayload'
+
+    WanUpdateResponseItem:
+      type: object
+      properties:
+        state:
+          $ref: '#/components/schemas/WanState'
+        loss_pct:
+          type: integer
+        latency_ms:
+          type: integer
+        jitter_ms:
+          type: integer
+        down_mbps:
+          type: number
+          format: float
+        up_mbps:
+          type: number
+          format: float
+
+    WansUpdateResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum:
+            - ok
+        wan1:
+          $ref: '#/components/schemas/WanUpdateResponseItem'
+        wan2:
+          $ref: '#/components/schemas/WanUpdateResponseItem'
+
+    BrightnessResponse:
+      type: object
+      properties:
+        brightness:
+          type: integer
+          minimum: 0
+          maximum: 15
+          description: Current brightness level
+        pot_level:
+          type: integer
+          minimum: 0
+          maximum: 15
+          description: Physical potentiometer level
+
+    BrightnessRequest:
+      type: object
+      required:
+        - brightness
+      properties:
+        brightness:
+          type: integer
+          minimum: 0
+          maximum: 15
+
+    BrightnessSetResponse:
+      type: object
+      properties:
+        brightness:
+          type: integer
+          minimum: 0
+          maximum: 15
+        status:
+          type: string
+          enum:
+            - ok
+
+    DisplayPowerResponse:
+      type: object
+      properties:
+        on:
+          type: boolean
+          description: Whether display is currently on
+        switch_position:
+          type: boolean
+          description: Physical switch position
+
+    DisplayPowerRequest:
+      type: object
+      required:
+        - on
+      properties:
+        on:
+          type: boolean
+
+    DisplayPowerSetResponse:
+      type: object
+      properties:
+        on:
+          type: boolean
+        status:
+          type: string
+          enum:
+            - ok
+
+    BwSourceResponse:
+      type: object
+      properties:
+        source:
+          type: string
+          enum:
+            - 15s
+            - 1m
+            - 5m
+            - 15m
+          description: Current bandwidth display source
+
+    BwSourceRequest:
+      type: object
+      required:
+        - source
+      properties:
+        source:
+          type: string
+          enum:
+            - 15s
+            - 1m
+            - 5m
+            - 15m
+
+    BwSourceSetResponse:
+      type: object
+      properties:
+        source:
+          type: string
+          enum:
+            - 15s
+            - 1m
+            - 5m
+            - 15m
+        status:
+          type: string
+          enum:
+            - ok

@@ -12,6 +12,13 @@ struct WanMetrics {
     uint16_t jitter_ms;
     float down_mbps;
     float up_mbps;
+    // EWMA bandwidth averages (1/5/15 minute)
+    float down_1m;
+    float down_5m;
+    float down_15m;
+    float up_1m;
+    float up_5m;
+    float up_15m;
     unsigned long last_update_ms;
     char local_ip[16];
     char gateway_ip[16];
@@ -31,6 +38,8 @@ void wan_metrics_init();
 void wan_metrics_update(int wan_id, WanState state, uint8_t loss_pct,
                         uint16_t latency_ms, uint16_t jitter_ms,
                         float down_mbps, float up_mbps,
+                        float down_1m, float down_5m, float down_15m,
+                        float up_1m, float up_5m, float up_15m,
                         const char* local_ip, const char* gateway_ip,
                         const char* monitor_ip);
 
@@ -51,3 +60,23 @@ WanState wan_state_from_string(const char* str);
 
 // Convert state enum to string
 const char* wan_state_to_string(WanState state);
+
+// Bandwidth source setting (which time window to display)
+enum class BandwidthSource : uint8_t {
+    INSTANT = 0,  // 15s (raw sample)
+    AVG_1M  = 1,  // 1 minute EWMA (default)
+    AVG_5M  = 2,  // 5 minute EWMA
+    AVG_15M = 3   // 15 minute EWMA
+};
+
+// Set/get bandwidth display source
+void wan_metrics_set_bw_source(BandwidthSource source);
+BandwidthSource wan_metrics_get_bw_source();
+
+// Get bandwidth values based on current source setting
+float wan_metrics_get_down(int wan_id);
+float wan_metrics_get_up(int wan_id);
+
+// Convert bandwidth source to/from string
+const char* bw_source_to_string(BandwidthSource source);
+BandwidthSource bw_source_from_string(const char* str);
