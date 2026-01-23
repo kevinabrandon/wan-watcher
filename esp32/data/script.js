@@ -209,14 +209,29 @@
     return'\u{1F534} DOWN';
   }
 
+  // === Bandwidth source selection ===
+  function getBwSource(){
+    var sel=document.querySelector('input[name="bw-source"]:checked');
+    return sel?sel.value:'1m';
+  }
+  function getBwValues(wan,src){
+    if(src==='15s')return{down:wan.down_mbps,up:wan.up_mbps};
+    if(src==='5m')return{down:wan.down_5m,up:wan.up_5m};
+    if(src==='15m')return{down:wan.down_15m,up:wan.up_15m};
+    return{down:wan.down_1m,up:wan.up_1m}; // default 1m
+  }
+
   // === Fetch data ===
   function fetchData(){
     fetch('/api/status').then(function(r){return r.json();}).then(function(d){
-      // Update 7-segment data
+      // Update 7-segment data using selected bandwidth source
+      var bwSrc=getBwSource();
+      var w1bw=getBwValues(d.wan1,bwSrc);
+      var w2bw=getBwValues(d.wan2,bwSrc);
       P.w1State=d.wan1.state;P.w1Lat=d.wan1.latency_ms;P.w1Jit=d.wan1.jitter_ms;P.w1Loss=d.wan1.loss_pct;
-      P.w1Down=d.wan1.down_mbps.toFixed(1);P.w1Up=d.wan1.up_mbps.toFixed(1);
+      P.w1Down=w1bw.down.toFixed(1);P.w1Up=w1bw.up.toFixed(1);
       P.w2State=d.wan2.state;P.w2Lat=d.wan2.latency_ms;P.w2Jit=d.wan2.jitter_ms;P.w2Loss=d.wan2.loss_pct;
-      P.w2Down=d.wan2.down_mbps.toFixed(1);P.w2Up=d.wan2.up_mbps.toFixed(1);
+      P.w2Down=w2bw.down.toFixed(1);P.w2Up=w2bw.up.toFixed(1);
       P.lpState=d.local.state;P.lpLat=d.local.latency_ms;P.lpJit=d.local.jitter_ms;P.lpLoss=d.local.loss_pct;
       updLeds();
       updDisp();
@@ -238,6 +253,10 @@
       }
       // Update table cells
       var $=function(id){return document.getElementById(id);};
+      if(d.hostname){
+        $('hostname').textContent=d.hostname;
+        $('hostname-table').textContent=d.hostname;
+      }
       $('w1-state').innerHTML=stateHtml(d.wan1.state);
       $('w1-mon').textContent=d.wan1.monitor_ip||'';
       $('w1-gw').textContent=d.wan1.gateway_ip||'';
@@ -245,8 +264,10 @@
       $('w1-loss').textContent=d.wan1.loss_pct+'%';
       $('w1-lat').textContent=d.wan1.latency_ms+' ms';
       $('w1-jit').textContent=d.wan1.jitter_ms+' ms';
-      $('w1-down').textContent=d.wan1.down_mbps.toFixed(1)+' Mbps';
-      $('w1-up').textContent=d.wan1.up_mbps.toFixed(1)+' Mbps';
+      $('w1-bw15').textContent=d.wan1.down_mbps.toFixed(1)+' / '+d.wan1.up_mbps.toFixed(1);
+      $('w1-avg1').textContent=d.wan1.down_1m.toFixed(1)+' / '+d.wan1.up_1m.toFixed(1);
+      $('w1-avg5').textContent=d.wan1.down_5m.toFixed(1)+' / '+d.wan1.up_5m.toFixed(1);
+      $('w1-avg15').textContent=d.wan1.down_15m.toFixed(1)+' / '+d.wan1.up_15m.toFixed(1);
       $('w2-state').innerHTML=stateHtml(d.wan2.state);
       $('w2-mon').textContent=d.wan2.monitor_ip||'';
       $('w2-gw').textContent=d.wan2.gateway_ip||'';
@@ -254,13 +275,22 @@
       $('w2-loss').textContent=d.wan2.loss_pct+'%';
       $('w2-lat').textContent=d.wan2.latency_ms+' ms';
       $('w2-jit').textContent=d.wan2.jitter_ms+' ms';
-      $('w2-down').textContent=d.wan2.down_mbps.toFixed(1)+' Mbps';
-      $('w2-up').textContent=d.wan2.up_mbps.toFixed(1)+' Mbps';
+      $('w2-bw15').textContent=d.wan2.down_mbps.toFixed(1)+' / '+d.wan2.up_mbps.toFixed(1);
+      $('w2-avg1').textContent=d.wan2.down_1m.toFixed(1)+' / '+d.wan2.up_1m.toFixed(1);
+      $('w2-avg5').textContent=d.wan2.down_5m.toFixed(1)+' / '+d.wan2.up_5m.toFixed(1);
+      $('w2-avg15').textContent=d.wan2.down_15m.toFixed(1)+' / '+d.wan2.up_15m.toFixed(1);
       $('lp-state').innerHTML=stateHtml(d.local.state);
+      $('lp-mon').textContent=d.local.monitor_ip||'';
       $('lp-gw').textContent=d.router_ip||'';
-      $('lp-loss').textContent=d.local.loss_pct+'%';
+      $('lp-lip').textContent=d.local.local_ip||'';
       $('lp-lat').textContent=d.local.latency_ms+' ms';
       $('lp-jit').textContent=d.local.jitter_ms+' ms';
+      $('lp-loss').textContent=d.local.loss_pct+'%';
+      // Sum WAN1 + WAN2 bandwidth for local row
+      $('lp-bw15').textContent=(d.wan1.down_mbps+d.wan2.down_mbps).toFixed(1)+' / '+(d.wan1.up_mbps+d.wan2.up_mbps).toFixed(1);
+      $('lp-avg1').textContent=(d.wan1.down_1m+d.wan2.down_1m).toFixed(1)+' / '+(d.wan1.up_1m+d.wan2.up_1m).toFixed(1);
+      $('lp-avg5').textContent=(d.wan1.down_5m+d.wan2.down_5m).toFixed(1)+' / '+(d.wan1.up_5m+d.wan2.up_5m).toFixed(1);
+      $('lp-avg15').textContent=(d.wan1.down_15m+d.wan2.down_15m).toFixed(1)+' / '+(d.wan1.up_15m+d.wan2.up_15m).toFixed(1);
     }).catch(function(e){console.error('Fetch error:',e);});
   }
   fetchData(); // Run immediately
@@ -402,4 +432,30 @@
   // Load initial power state and poll for changes
   fetchPowerState();
   setInterval(fetchPowerState, 2000);
+
+  // === Bandwidth source selection ===
+  function fetchBwSource() {
+    fetch('/api/bw-source').then(function(r) { return r.json(); }).then(function(d) {
+      var radio = document.getElementById('bw-' + d.source);
+      if (radio) radio.checked = true;
+    }).catch(function(e) { console.error('BW source fetch error:', e); });
+  }
+
+  function postBwSource(source) {
+    fetch('/api/bw-source', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({source: source})
+    }).catch(function(e) { console.error('BW source post error:', e); });
+  }
+
+  // Add event listeners to bandwidth source radio buttons
+  document.querySelectorAll('input[name="bw-source"]').forEach(function(radio) {
+    radio.addEventListener('change', function() {
+      postBwSource(this.value);
+    });
+  });
+
+  // Load initial bandwidth source
+  fetchBwSource();
 })();

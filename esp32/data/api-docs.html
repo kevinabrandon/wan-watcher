@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WAN Watcher API Documentation</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <script type="module" src="https://unpkg.com/rapidoc/dist/rapidoc-min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+        }
+        rapi-doc {
+            width: 100%;
+            height: 100vh;
+        }
+        .back-link {
+            position: fixed;
+            top: 10px;
+            right: 20px;
+            z-index: 1000;
+            background: #333;
+            color: #0f0;
+            padding: 8px 16px;
+            text-decoration: none;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 14px;
+        }
+        .back-link:hover {
+            background: #444;
+        }
+    </style>
+</head>
+<body>
+    <a href="/" class="back-link">&larr; Back to Dashboard</a>
+    <rapi-doc
+        spec-url="/openapi.yaml"
+        theme="dark"
+        bg-color="#1a1a1a"
+        text-color="#ccc"
+        header-color="#222"
+        primary-color="#0f0"
+        nav-bg-color="#111"
+        nav-text-color="#ccc"
+        nav-hover-bg-color="#333"
+        nav-hover-text-color="#0f0"
+        nav-accent-color="#0f0"
+        render-style="read"
+        schema-style="table"
+        show-header="false"
+        allow-try="true"
+        allow-authentication="false"
+        regular-font="monospace"
+        mono-font="monospace"
+    >
+    </rapi-doc>
+</body>
+</html>

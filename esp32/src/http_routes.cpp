@@ -34,6 +34,10 @@ static String get_content_type(const String& filename) {
     if (filename.endsWith(".css")) return "text/css";
     if (filename.endsWith(".js")) return "application/javascript";
     if (filename.endsWith(".svg")) return "image/svg+xml";
+    if (filename.endsWith(".yaml") || filename.endsWith(".yml")) return "text/yaml";
+    if (filename.endsWith(".md")) return "text/markdown";
+    if (filename.endsWith(".png")) return "image/png";
+    if (filename.endsWith(".jpg") || filename.endsWith(".jpeg")) return "image/jpeg";
     return "text/plain";
 }
 
@@ -67,12 +71,20 @@ static bool parse_wan_json(JsonObject& obj, int wan_id) {
     uint16_t jitter_ms = obj["jitter_ms"] | 0;
     float down_mbps = obj["down_mbps"] | 0.0f;
     float up_mbps = obj["up_mbps"] | 0.0f;
+    float down_1m = obj["down_1m"] | 0.0f;
+    float down_5m = obj["down_5m"] | 0.0f;
+    float down_15m = obj["down_15m"] | 0.0f;
+    float up_1m = obj["up_1m"] | 0.0f;
+    float up_5m = obj["up_5m"] | 0.0f;
+    float up_15m = obj["up_15m"] | 0.0f;
     const char* local_ip = obj["local_ip"] | "";
     const char* gateway_ip = obj["gateway_ip"] | "";
     const char* monitor_ip = obj["monitor_ip"] | "";
 
     wan_metrics_update(wan_id, state, loss_pct, latency_ms, jitter_ms,
-                       down_mbps, up_mbps, local_ip, gateway_ip, monitor_ip);
+                       down_mbps, up_mbps,
+                       down_1m, down_5m, down_15m, up_1m, up_5m, up_15m,
+                       local_ip, gateway_ip, monitor_ip);
 
     // Update LEDs based on WAN
     if (wan_id == 1) {
@@ -149,6 +161,7 @@ static void handle_status_get(WebServer& server) {
     const char* timestamp = wan_metrics_get_timestamp();
 
     JsonDocument doc;
+    doc["hostname"] = get_network_hostname();
     doc["timestamp"] = timestamp;
     doc["router_ip"] = wan_metrics_get_router_ip();
 
@@ -159,6 +172,12 @@ static void handle_status_get(WebServer& server) {
     wan1["loss_pct"] = w1.loss_pct;
     wan1["down_mbps"] = w1.down_mbps;
     wan1["up_mbps"] = w1.up_mbps;
+    wan1["down_1m"] = w1.down_1m;
+    wan1["down_5m"] = w1.down_5m;
+    wan1["down_15m"] = w1.down_15m;
+    wan1["up_1m"] = w1.up_1m;
+    wan1["up_5m"] = w1.up_5m;
+    wan1["up_15m"] = w1.up_15m;
     wan1["monitor_ip"] = w1.monitor_ip;
     wan1["gateway_ip"] = w1.gateway_ip;
     wan1["local_ip"] = w1.local_ip;
@@ -170,6 +189,12 @@ static void handle_status_get(WebServer& server) {
     wan2["loss_pct"] = w2.loss_pct;
     wan2["down_mbps"] = w2.down_mbps;
     wan2["up_mbps"] = w2.up_mbps;
+    wan2["down_1m"] = w2.down_1m;
+    wan2["down_5m"] = w2.down_5m;
+    wan2["down_15m"] = w2.down_15m;
+    wan2["up_1m"] = w2.up_1m;
+    wan2["up_5m"] = w2.up_5m;
+    wan2["up_15m"] = w2.up_15m;
     wan2["monitor_ip"] = w2.monitor_ip;
     wan2["gateway_ip"] = w2.gateway_ip;
     wan2["local_ip"] = w2.local_ip;
@@ -179,6 +204,8 @@ static void handle_status_get(WebServer& server) {
     local["latency_ms"] = lp.latency_ms;
     local["jitter_ms"] = lp.jitter_ms;
     local["loss_pct"] = lp.loss_pct;
+    local["local_ip"] = get_network_ip();
+    local["monitor_ip"] = local_pinger_get_target();
 
     // Freshness bar timing constants (in seconds, matching hardware)
     JsonObject freshness = doc["freshness"].to<JsonObject>();
@@ -286,6 +313,44 @@ static void handle_display_power_post(WebServer& server) {
     server.send(200, "application/json", output);
 }
 
+// ---- Handler: GET /api/bw-source ----
+static void handle_bw_source_get(WebServer& server) {
+    JsonDocument doc;
+    doc["source"] = bw_source_to_string(wan_metrics_get_bw_source());
+
+    String output;
+    serializeJson(doc, output);
+    server.send(200, "application/json", output);
+}
+
+// ---- Handler: POST /api/bw-source ----
+static void handle_bw_source_post(WebServer& server) {
+    if (!server.hasArg("plain")) {
+        server.send(400, "application/json", "{\"error\":\"no body\"}");
+        return;
+    }
+
+    String body = server.arg("plain");
+    JsonDocument doc;
+    DeserializationError error = deserializeJson(doc, body);
+
+    if (error) {
+        server.send(400, "application/json", "{\"error\":\"invalid JSON\"}");
+        return;
+    }
+
+    const char* source_str = doc["source"] | "1m";
+    wan_metrics_set_bw_source(bw_source_from_string(source_str));
+
+    JsonDocument resp;
+    resp["source"] = bw_source_to_string(wan_metrics_get_bw_source());
+    resp["status"] = "ok";
+
+    String output;
+    serializeJson(resp, output);
+    server.send(200, "application/json", output);
+}
+
 // ---- Public: wire up all routes ----
 void setup_routes(WebServer& server) {
     // Initialize LittleFS
@@ -317,6 +382,12 @@ void setup_routes(WebServer& server) {
     });
     server.on("/api/display-power", HTTP_POST, [&server]() {
         handle_display_power_post(server);
+    });
+    server.on("/api/bw-source", HTTP_GET, [&server]() {
+        handle_bw_source_get(server);
+    });
+    server.on("/api/bw-source", HTTP_POST, [&server]() {
+        handle_bw_source_post(server);
     });
 
     // Favicons (still served from memory for speed)

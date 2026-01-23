@@ -12,6 +12,49 @@
   <p><strong>Hostname:</strong> <code id="hostname"></code><br>
   <strong>Last update:</strong> <code id="last-update">Never</code> <span id="elapsed-time" style="color:#666;"></span></p>
 
+  <h3>Interface Status</h3>
+  <table>
+    <thead>
+      <tr>
+        <th colspan="6">Interfaces</th>
+      </tr>
+      <tr>
+        <th>Interface</th>
+        <th>Description</th>
+        <th>State</th>
+        <th>Monitor IP</th>
+        <th>Gateway IP</th>
+        <th>Local IP</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>WAN1</td>
+        <td>PeakWifi</td>
+        <td id="w1-state">&#x1F534; DOWN</td>
+        <td id="w1-mon"></td>
+        <td id="w1-gw"></td>
+        <td id="w1-lip"></td>
+      <tr>
+        <td>WAN2</td>
+        <td>Starlink</td>
+        <td id="w2-state">&#x1F534; DOWN</td>
+        <td id="w2-mon"></td>
+        <td id="w2-gw"></td>
+        <td id="w2-lip"></td>
+      </tr>
+      <tr>
+        <td>Local</td>
+        <td id="hostname-table"></td>
+        <td id="lp-state">&#x1F534; DOWN</td>
+        <td id="lp-mon"></td>
+        <td id="lp-gw"></td>
+        <td id="lp-lip"></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>Panel</h3>
   <div class="display-panel" id="seg-panel"
     data-w1-state="down" data-w1-lat="0" data-w1-jit="0" data-w1-loss="100" data-w1-down="0.0" data-w1-up="0.0"
     data-w2-state="down" data-w2-lat="0" data-w2-jit="0" data-w2-loss="100" data-w2-down="0.0" data-w2-up="0.0"
@@ -64,62 +107,56 @@
   <table>
     <thead>
       <tr>
+        <th />
+        <th colspan="3">Packets (L/J/P)</th>
+        <th colspan="4">Bandwidth (d/U)</th>
+      </tr>
+      <tr>
         <th>Interface</th>
-        <th>Description</th>
-        <th>State</th>
-        <th>Monitor IP</th>
-        <th>Gateway IP</th>
-        <th>Local IP</th>
-        <th>Loss</th>
-        <th>Latency</th>
-        <th>Jitter</th>
-        <th>Download</th>
-        <th>Upload</th>
+        <th>Latency (L)</th>
+        <th>Jitter (J)</th>
+        <th>Loss % (P)</th>
+        <th><input type="radio" name="bw-source" value="15s" id="bw-15s"> 15s</th>
+        <th><input type="radio" name="bw-source" value="1m" id="bw-1m" checked> Avg 1m</th>
+        <th><input type="radio" name="bw-source" value="5m" id="bw-5m"> Avg 5m</th>
+        <th><input type="radio" name="bw-source" value="15m" id="bw-15m"> Avg 15m</th>
       </tr>
     </thead>
     <tbody>
       <tr>
         <td>WAN1</td>
-        <td>PeakWifi</td>
-        <td id="w1-state">&#x1F534; DOWN</td>
-        <td id="w1-mon"></td>
-        <td id="w1-gw"></td>
-        <td id="w1-lip"></td>
-        <td id="w1-loss">100%</td>
         <td id="w1-lat">0 ms</td>
         <td id="w1-jit">0 ms</td>
-        <td id="w1-down">0.0 Mbps</td>
-        <td id="w1-up">0.0 Mbps</td>
+        <td id="w1-loss">100%</td>
+        <td id="w1-bw15">0.0 / 0.0</td>
+        <td id="w1-avg1">- / -</td>
+        <td id="w1-avg5">- / -</td>
+        <td id="w1-avg15">- / -</td>
       </tr>
       <tr>
         <td>WAN2</td>
-        <td>Starlink</td>
-        <td id="w2-state">&#x1F534; DOWN</td>
-        <td id="w2-mon"></td>
-        <td id="w2-gw"></td>
-        <td id="w2-lip"></td>
-        <td id="w2-loss">100%</td>
         <td id="w2-lat">0 ms</td>
         <td id="w2-jit">0 ms</td>
-        <td id="w2-down">0.0 Mbps</td>
-        <td id="w2-up">0.0 Mbps</td>
+        <td id="w2-loss">100%</td>
+        <td id="w2-bw15">0.0 / 0.0</td>
+        <td id="w2-avg1">- / -</td>
+        <td id="w2-avg5">- / -</td>
+        <td id="w2-avg15">- / -</td>
       </tr>
       <tr>
         <td>Local</td>
-        <td id="hostname-table"></td>
-        <td id="lp-state">&#x1F534; DOWN</td>
-        <td id="lp-mon"></td>
-        <td id="lp-gw"></td>
-        <td id="lp-lip"></td>
-        <td id="lp-loss">100%</td>
         <td id="lp-lat">0 ms</td>
         <td id="lp-jit">0 ms</td>
-        <td>-</td>
-        <td>-</td>
+        <td id="lp-loss">100%</td>
+        <td id="lp-bw15">0.0 / 0.0</td>
+        <td id="lp-avg1">0.0 / 0.0</td>
+        <td id="lp-avg5">0.0 / 0.0</td>
+        <td id="lp-avg15">0.0 / 0.0</td>
       </tr>
     </tbody>
   </table>
-
+  <hr />
+  <p><a href="/docs.html">Documentation</a> | <a href="/api-docs.html">API Reference</a> | <a href="https://github.com/kevinabrandon/wan-watcher">GitHub</a></p>
   <script src="script.js"></script>
 </body>
 </html>
