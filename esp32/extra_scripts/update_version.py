@@ -113,11 +113,7 @@ def copy_documentation(source, target, env):
     print(f"Copied {len(copied)} documentation files to data/docs/")
 
 
-def pre_build_filesystem(source, target, env):
-    """Run all pre-build tasks for the filesystem."""
-    update_openapi_version(source, target, env)
-    copy_documentation(source, target, env)
-
-
-# Register the callback to run before building the filesystem image
-env.AddPreAction("$BUILD_DIR/littlefs.bin", pre_build_filesystem)
+# Run tasks immediately when script is loaded
+# The pre: prefix in platformio.ini ensures this runs before the build
+update_openapi_version(None, None, env)
+copy_documentation(None, None, env)
