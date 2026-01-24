@@ -142,9 +142,12 @@ void MetricDisplay::render() {
 
     // Get last update timestamp based on data source
     unsigned long last_update_ms;
-    if (_wan_id == 0) {
-        // Local pinger
+    if (_wan_id == 0 && _type == DisplayType::PACKET) {
+        // Local pinger packet metrics
         last_update_ms = local_pinger_get().last_update_ms;
+    } else if (_wan_id == 0 && _type == DisplayType::BANDWIDTH) {
+        // Local bandwidth (sum of WANs) - use WAN1 timestamp
+        last_update_ms = wan_metrics_get(1).last_update_ms;
     } else {
         // WAN metrics
         last_update_ms = wan_metrics_get(_wan_id).last_update_ms;
@@ -227,11 +230,21 @@ void MetricDisplay::renderBandwidthValue() {
 
     switch (_bandwidth_metric) {
         case BandwidthMetric::DOWNLOAD:
-            value = wan_metrics_get_down(_wan_id);
+            if (_wan_id == 0) {
+                // Local bandwidth: sum of WAN1 + WAN2
+                value = wan_metrics_get_down(1) + wan_metrics_get_down(2);
+            } else {
+                value = wan_metrics_get_down(_wan_id);
+            }
             letter = 'd';
             break;
         case BandwidthMetric::UPLOAD:
-            value = wan_metrics_get_up(_wan_id);
+            if (_wan_id == 0) {
+                // Local bandwidth: sum of WAN1 + WAN2
+                value = wan_metrics_get_up(1) + wan_metrics_get_up(2);
+            } else {
+                value = wan_metrics_get_up(_wan_id);
+            }
             letter = 'U';
             break;
     }

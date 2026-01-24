@@ -2,7 +2,7 @@
 
 * 1× Olimex ESP32-POE-ISO
 * 1× MCP23017 I2C GPIO expander (address 0x20)
-* 5× Adafruit 4-digit 7-segment displays (HT16K33, addresses 0x71-0x75)
+* 6× Adafruit 4-digit 7-segment displays (HT16K33, addresses 0x71-0x76)
 * 1× Adafruit Bicolor 24-Bar Bargraph w/I2C Backpack (HT16K33, address 0x70)
 * 2× Momentary push buttons (active low, directly to MCP23017 with internal pull-ups)
 * 3× Bicolor (green/red) LEDs for WAN status indicators (WAN1, WAN2, Local)
@@ -43,6 +43,7 @@
 | 0x73 | WAN2 Packet (L/J/P) |
 | 0x74 | WAN2 Bandwidth (d/U) |
 | 0x75 | Local Packet (L/J/P) |
+| 0x76 | Local Bandwidth (d/U) - sum of WAN1 + WAN2 |
 
 ---
 
