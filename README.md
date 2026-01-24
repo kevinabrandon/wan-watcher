@@ -22,6 +22,7 @@ wan-watcher collects real-time WAN metrics from pfSense (latency, loss, jitter, 
   * Regularly posts to ESP32 each WAN's state
 
 * **ESP32 indicator panel**
+  * Ethernet connectivity via Olimex ESP32-POE-ISO with mDNS (`wan-watcher.local`)
   * Receives metrics via JSON API (`POST /api/wans` batch endpoint)
   * Bicolor LED indicators for WAN1, WAN2, and Local state (green=UP, yellow=DEGRADED, red=DOWN) via MCP23017 I2C expander
   * 24-segment bicolor LED bargraph showing data freshness
@@ -77,24 +78,6 @@ wan-watcher/
 ```
 
 ---
-
-## ESP32 Network Configuration
-
-The ESP32 connects via Ethernet using the Olimex ESP32-POE-ISO's built-in LAN8720 PHY.
-
-The device uses the hostname `wan-watcher` and exposes itself via mDNS (Bonjour/Avahi):
-
-```
-http://wan-watcher.local/
-```
-
-Your OS must support mDNS for this to work (macOS: built-in, Linux: Avahi, Windows: Bonjour).
-
----
-
-## ESP32 Firmware Development/Deployment
-
-See the [ESP32 Firmware Development/Deployment Guide](./esp32/README.md) for instructions on how to build and deploy the firmware.
 
 ## License
 

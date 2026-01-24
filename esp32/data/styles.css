@@ -1,17 +1,6 @@
-body {
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  margin: 1.5rem;
-}
-h1 { font-size: 2rem; margin-top: 0; margin-bottom: 0.5rem; font-weight: 600; display: flex; align-items: center; gap: 0.3em; }
-h2 { font-size: 1.4rem; margin-top: 1.2rem; margin-bottom: 0.4rem; font-weight: 600; }
-h3 { font-size: 1.15rem; margin-top: 0.9rem; margin-bottom: 0.3rem; font-weight: 600; }
-h1 img { height: 1em; width: 1em; }
-.status { margin-top: 0.5rem; margin-bottom: 1.5rem; }
-code { background: #f5f5f5; padding: 2px 4px; border-radius: 3px; }
-table { border-collapse: collapse; margin: 1rem 0; }
-th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-thead tr:first-child th {text-align: center;}
-th { background: #f5f5f5; }
+/* Dashboard-specific styles (works with shell.css) */
+
+/* Freshness bar */
 .freshness-bar {
   display: flex;
   height: 20px;
@@ -21,6 +10,8 @@ th { background: #f5f5f5; }
   background: #222;
   gap: 2px;
   padding: 2px;
+  width: 180px;
+  flex-shrink: 0;
 }
 .freshness-led {
   flex: 1;
@@ -34,20 +25,78 @@ th { background: #f5f5f5; }
 .freshness-led.red { background: #e74c3c; box-shadow: 0 0 4px #e74c3c; }
 .freshness-bar.blink .freshness-led.red { animation: led-blink 0.5s infinite; }
 @keyframes led-blink { 50% { background: #333; box-shadow: none; } }
+
 /* 7-segment display panel */
-.display-panel { background: #3a3a3a; padding: 1rem; border-radius: 8px; margin: 1rem 0; display: inline-block; border: 2px solid #555; }
-.display-grid { display: grid; grid-template-columns: auto auto auto auto; gap: 25px 25px; align-items: center; }
-.display-grid .row-label { color: #ccc; font-size: 0.9em; font-weight: bold; text-align: right; padding-right: 8px; }
-.display-grid .col-header { color: #aaa; font-size: 0.8em; font-weight: bold; text-align: center; }
-.seg-display { display: inline-flex; background: #111; padding: 8px 12px; border-radius: 6px; cursor: pointer; justify-self: center; }
+.display-panel {
+  background: #2a2a2a;
+  padding: 1rem;
+  border-radius: 8px;
+  margin: 1rem 0;
+  display: inline-block;
+  border: 2px solid #444;
+}
+.display-grid {
+  display: grid;
+  grid-template-columns: auto auto auto auto;
+  gap: 25px 25px;
+  align-items: center;
+}
+.display-grid .row-label {
+  color: #ccc;
+  font-size: 0.9em;
+  font-weight: bold;
+  text-align: right;
+  padding-right: 8px;
+}
+.display-grid .col-header {
+  color: #aaa;
+  font-size: 0.8em;
+  font-weight: bold;
+  text-align: center;
+}
+.seg-display {
+  display: inline-flex;
+  background: #111;
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  justify-self: center;
+}
+
 /* Top control row */
-.control-row { display: flex; align-items: left; gap: 16px; margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid #444; }
-.power-toggle-panel { display: flex; align-items: center; gap: 8px; }
-.power-toggle-panel label { color: #ccc; font-size: 0.8em; }
-.brightness-panel { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
-.brightness-panel span { color: #ccc; font-size: 0.8em; min-width: 1.5em; }
+.control-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #444;
+}
+.power-toggle-panel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.power-toggle-panel label {
+  color: #ccc;
+  font-size: 0.8em;
+}
+.brightness-panel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.brightness-panel span {
+  color: #ccc;
+  font-size: 0.8em;
+  min-width: 1.5em;
+}
+
+/* Dial knob */
 .dial-knob {
-  width: 36px; height: 36px;
+  width: 36px;
+  height: 36px;
   background: linear-gradient(145deg, #2a4a6a, #1a3050);
   border-radius: 50%;
   border: 2px solid #4a7aa0;
@@ -58,8 +107,10 @@ th { background: #f5f5f5; }
 .dial-knob::after {
   content: '';
   position: absolute;
-  top: 4px; left: 50%;
-  width: 3px; height: 10px;
+  top: 4px;
+  left: 50%;
+  width: 3px;
+  height: 10px;
   background: #8ac;
   border-radius: 2px;
   transform: translateX(-50%);
@@ -67,31 +118,81 @@ th { background: #f5f5f5; }
 }
 .dial-knob:hover { border-color: #6a9ac0; }
 .dial-knob:active { box-shadow: 0 1px 2px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255,255,255,0.1); }
-.freshness-bar { width: 180px; flex-shrink: 0; }
+
 /* State LEDs */
-.led-group { display: flex; justify-content: center; gap: 6px; }
-.state-led { width: 16px; height: 16px; border-radius: 50%; border: 1px solid #555; }
+.led-group {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+}
+.state-led {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 1px solid #555;
+}
 .state-led.off { background: #333; }
 .state-led.green { background: #2ecc71; box-shadow: 0 0 8px #2ecc71; }
 .state-led.yellow { background: #f1c40f; box-shadow: 0 0 8px #f1c40f; }
 .state-led.red { background: #e74c3c; box-shadow: 0 0 8px #e74c3c; }
 .state-led.blink-red { background: #e74c3c; box-shadow: 0 0 8px #e74c3c; animation: led-blink 0.5s infinite; }
-.digit { position: relative; width: 28px; height: 50px; margin: 0 2px; }
-.seg { position: absolute; background: #222; border-radius: 2px; }
-.seg.on { background: #f00; box-shadow: 0 0 6px #f00; }
-.seg-a,.seg-d,.seg-g { width: 18px; height: 5px; left: 5px; }
+
+/* 7-segment digits */
+.digit {
+  position: relative;
+  width: 28px;
+  height: 50px;
+  margin: 0 2px;
+}
+.seg {
+  position: absolute;
+  background: #222;
+  border-radius: 2px;
+}
+.seg.on {
+  background: #f00;
+  box-shadow: 0 0 6px #f00;
+}
+.seg-a, .seg-d, .seg-g {
+  width: 18px;
+  height: 5px;
+  left: 5px;
+}
 .seg-a { top: 0; }
 .seg-g { top: 22px; }
 .seg-d { top: 45px; }
-.seg-b,.seg-c,.seg-e,.seg-f { width: 5px; height: 18px; }
+.seg-b, .seg-c, .seg-e, .seg-f {
+  width: 5px;
+  height: 18px;
+}
 .seg-f { left: 0; top: 3px; }
 .seg-b { right: 0; top: 3px; }
 .seg-e { left: 0; top: 25px; }
 .seg-c { right: 0; top: 25px; }
-.seg-dp { position: absolute; width: 5px; height: 5px; right: -3px; bottom: 2px; border-radius: 50%; background: #222; }
-.seg-dp.on { background: #f00; box-shadow: 0 0 6px #f00; }
-.override-indicator { font-size: 0.7em; color: #f39c12; }
-.switch-status { font-size: 0.7em; color: #999; }
+.seg-dp {
+  position: absolute;
+  width: 5px;
+  height: 5px;
+  right: -3px;
+  bottom: 2px;
+  border-radius: 50%;
+  background: #222;
+}
+.seg-dp.on {
+  background: #f00;
+  box-shadow: 0 0 6px #f00;
+}
+
+/* Status indicators */
+.override-indicator {
+  font-size: 0.7em;
+  color: #f39c12;
+}
+.switch-status {
+  font-size: 0.7em;
+  color: #999;
+}
+
 /* Vertical Toggle Switch */
 .v-toggle-switch {
   position: relative;
@@ -104,7 +205,8 @@ th { background: #f5f5f5; }
   cursor: pointer;
   box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);
 }
-.v-toggle-switch .on-label, .v-toggle-switch .off-label {
+.v-toggle-switch .on-label,
+.v-toggle-switch .off-label {
   position: absolute;
   left: 0;
   right: 0;
@@ -113,11 +215,18 @@ th { background: #f5f5f5; }
   font-weight: bold;
   color: #888;
   transition: color 0.3s ease-in-out;
-  -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
 }
 .v-toggle-switch .on-label { top: 6px; }
 .v-toggle-switch .off-label { bottom: 6px; }
-.v-toggle-switch input { opacity: 0; width: 0; height: 0; }
+.v-toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
 .v-slider {
   position: absolute;
   left: 4px;
@@ -130,10 +239,15 @@ th { background: #f5f5f5; }
   box-shadow: 0 1px 3px rgba(0,0,0,0.4);
 }
 .v-toggle-switch input:checked ~ .v-slider {
-  transform: translateY(4px); /* ON position - Top */
+  transform: translateY(4px);
 }
 .v-toggle-switch input:not(:checked) ~ .v-slider {
-  transform: translateY(30px); /* OFF position - Bottom */
+  transform: translateY(30px);
 }
 .v-toggle-switch input:checked ~ .on-label { color: #2ecc71; }
 .v-toggle-switch input:not(:checked) ~ .off-label { color: #fff; }
+
+/* Radio button styling for dark theme */
+input[type="radio"] {
+  accent-color: #0f0;
+}
