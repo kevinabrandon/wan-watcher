@@ -1,68 +1,13 @@
 """
-PlatformIO build script for pre-filesystem tasks:
-1. Update openapi.yaml version from git tags
-2. Copy documentation files to data/docs/
+PlatformIO build script to copy documentation files to data/docs/.
 
 Runs before building the LittleFS filesystem image.
 """
-import subprocess
-import re
 import os
 import shutil
 import glob
 
 Import("env")
-
-
-def get_git_version():
-    """Get version string from git tags or commit hash."""
-    try:
-        # Try to get a tag-based version (e.g., "v1.2.3" or "v1.2.3-5-gabcdef")
-        version = subprocess.check_output(
-            ["git", "describe", "--tags", "--always"],
-            stderr=subprocess.DEVNULL
-        ).decode().strip()
-
-        # Strip leading 'v' if present (v1.2.3 -> 1.2.3)
-        if version.startswith("v"):
-            version = version[1:]
-
-        return version
-    except Exception:
-        return "0.0.0-dev"
-
-
-def update_openapi_version(source, target, env):
-    """Update the version field in openapi.yaml before building filesystem."""
-    version = get_git_version()
-
-    # Path to openapi.yaml in the data directory
-    project_dir = env.get("PROJECT_DIR", ".")
-    openapi_path = os.path.join(project_dir, "data", "openapi.yaml")
-
-    if not os.path.exists(openapi_path):
-        print(f"Warning: {openapi_path} not found, skipping version update")
-        return
-
-    with open(openapi_path, "r") as f:
-        content = f.read()
-
-    # Replace the version line in the info section
-    # Matches "  version: <anything>" and replaces with the git version
-    new_content = re.sub(
-        r"^(  version: ).+$",
-        rf"\g<1>{version}",
-        content,
-        count=1,
-        flags=re.MULTILINE
-    )
-
-    if new_content != content:
-        with open(openapi_path, "w") as f:
-            f.write(new_content)
-        print(f"Updated openapi.yaml version to: {version}")
-    else:
-        print(f"openapi.yaml version already set or pattern not found")
 
 
 def copy_documentation(source, target, env):
@@ -113,7 +58,5 @@ def copy_documentation(source, target, env):
     print(f"Copied {len(copied)} documentation files to data/docs/")
 
 
-# Run tasks immediately when script is loaded
-# The pre: prefix in platformio.ini ensures this runs before the build
-update_openapi_version(None, None, env)
+# Run when script is loaded (pre: prefix ensures this runs before build)
 copy_documentation(None, None, env)

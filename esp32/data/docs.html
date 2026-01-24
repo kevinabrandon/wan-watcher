@@ -6,7 +6,9 @@
   <title>Documentation - wan-watcher</title>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <link rel="stylesheet" href="shell.css">
-  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked@15.0.12/marked.min.js"
+          integrity="sha384-948ahk4ZmxYVYOc+rxN1H2gM1EJ2Duhp7uHtZ4WSLkV4Vtx5MUqnV+l7u9B+jFv+"
+          crossorigin="anonymous"></script>
   <style>
     /* Documentation-specific styles */
     .nav-subitems {
@@ -160,7 +162,7 @@
       { id: 'hardware', title: 'Hardware', path: '/docs/hardware.md' },
       { id: 'pfsense', title: 'pfSense Installation', path: '/docs/pfsense-install.md' },
       { id: 'api', title: 'API Reference', path: '/docs/api.md' },
-      { id: 'troubleshooting', title: 'Troubleshooting', path: '/docs/troubleshooting.md' }
+      { id: 'technical-notes', title: 'Technical Notes', path: '/docs/technical-notes.md' }
     ];
 
     const tocEl = document.getElementById('toc');
@@ -217,6 +219,18 @@
         markdown = markdown.replace(/\(\.\/diagrams\//g, '(/docs/diagrams/');
 
         contentEl.innerHTML = marked.parse(markdown);
+
+        // Intercept clicks on internal doc links
+        contentEl.querySelectorAll('a[href]').forEach(link => {
+          const href = link.getAttribute('href');
+          const match = docs.find(d => d.path === href || href.endsWith(d.path.replace('/docs/', '')));
+          if (match) {
+            link.addEventListener('click', (e) => {
+              e.preventDefault();
+              loadDoc(match.id);
+            });
+          }
+        });
       } catch (err) {
         contentEl.innerHTML = `<div class="error">Failed to load ${doc.path}: ${err.message}</div>`;
       }
