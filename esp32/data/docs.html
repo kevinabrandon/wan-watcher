@@ -6,6 +6,16 @@
   <title>Documentation - wan-watcher</title>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <link rel="stylesheet" href="shell.css">
+  <script>
+    // Set sidebar state before render to prevent flash
+    if (localStorage.getItem('wan-watcher-sidebar') === 'expanded') {
+      document.documentElement.classList.add('sidebar-expanded');
+    }
+  </script>
+  <style>
+    /* Override collapsed state if localStorage says expanded */
+    html.sidebar-expanded .sidebar.collapsed { width: 220px; border-right: 1px solid var(--border-color); }
+  </style>
   <script src="https://cdn.jsdelivr.net/npm/marked@15.0.12/marked.min.js"
           integrity="sha384-948ahk4ZmxYVYOc+rxN1H2gM1EJ2Duhp7uHtZ4WSLkV4Vtx5MUqnV+l7u9B+jFv+"
           crossorigin="anonymous"></script>
@@ -133,6 +143,7 @@
       <span class="topbar-title">
         <strong>Documentation</strong>
       </span>
+      <span class="topbar-version" id="version-info"></span>
     </div>
 
     <main class="main-content" id="content">
@@ -153,7 +164,9 @@
 
     menuToggle.addEventListener('click', () => {
       sidebar.classList.toggle('collapsed');
-      localStorage.setItem(SIDEBAR_KEY, sidebar.classList.contains('collapsed') ? 'collapsed' : 'expanded');
+      const isCollapsed = sidebar.classList.contains('collapsed');
+      localStorage.setItem(SIDEBAR_KEY, isCollapsed ? 'collapsed' : 'expanded');
+      document.documentElement.classList.toggle('sidebar-expanded', !isCollapsed);
     });
 
     // Documentation loading
@@ -239,6 +252,15 @@
     // Load initial doc from hash or default to readme
     const initialDoc = location.hash.slice(1) || 'readme';
     loadDoc(initialDoc);
+
+    // Load version info
+    fetch('/version.json')
+      .then(r => r.json())
+      .then(v => {
+        document.getElementById('version-info').innerHTML =
+          `v${v.version} (<code>${v.git_hash}</code>) &bull; ${v.build_time}`;
+      })
+      .catch(() => {});
   </script>
 </body>
 </html>

@@ -1,13 +1,61 @@
 """
-PlatformIO build script to copy documentation files to data/docs/.
+PlatformIO build script for pre-filesystem tasks:
+1. Copy documentation files to data/docs/
+2. Generate version.json with version, git hash, and build time
 
 Runs before building the LittleFS filesystem image.
 """
 import os
 import shutil
 import glob
+import subprocess
+import re
+import json
+from datetime import datetime, timezone
 
 Import("env")
+
+
+def get_git_hash():
+    """Get short git commit hash."""
+    try:
+        return subprocess.check_output(
+            ["git", "rev-parse", "--short", "HEAD"],
+            stderr=subprocess.DEVNULL
+        ).decode().strip()
+    except Exception:
+        return "unknown"
+
+
+def get_openapi_version(project_dir):
+    """Read version from openapi.yaml."""
+    openapi_path = os.path.join(project_dir, "data", "openapi.yaml")
+    try:
+        with open(openapi_path, "r") as f:
+            content = f.read()
+        match = re.search(r"^\s+version:\s+(.+)$", content, re.MULTILINE)
+        if match:
+            return match.group(1).strip()
+    except Exception:
+        pass
+    return "0.0.0"
+
+
+def generate_version_json(source, target, env):
+    """Generate version.json with build info."""
+    project_dir = env.get("PROJECT_DIR", ".")
+
+    version_info = {
+        "version": get_openapi_version(project_dir),
+        "git_hash": get_git_hash(),
+        "build_time": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    }
+
+    version_path = os.path.join(project_dir, "data", "version.json")
+    with open(version_path, "w") as f:
+        json.dump(version_info, f)
+
+    print(f"Generated version.json: v{version_info['version']} ({version_info['git_hash']}) built {version_info['build_time']}")
 
 
 def copy_documentation(source, target, env):
@@ -59,4 +107,5 @@ def copy_documentation(source, target, env):
 
 
 # Run when script is loaded (pre: prefix ensures this runs before build)
+generate_version_json(None, None, env)
 copy_documentation(None, None, env)

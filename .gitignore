@@ -4,8 +4,9 @@ esp32/.vscode/
 esp32/.clang_complete
 esp32/.gcc-flags.json
 
-# Generated at build time (see extra_scripts/update_version.py)
+# Generated at build time (see extra_scripts/copy_docs.py)
 esp32/data/docs/
+esp32/data/version.json
 
 # npm (package.json is only for Dependabot alerts)
 node_modules/

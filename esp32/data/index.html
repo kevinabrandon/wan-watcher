@@ -7,6 +7,16 @@
   <link rel="icon" type="image/svg+xml" href="/favicon-green.svg">
   <link rel="stylesheet" href="shell.css">
   <link rel="stylesheet" href="styles.css">
+  <script>
+    // Set sidebar state before render to prevent flash
+    if (localStorage.getItem('wan-watcher-sidebar') === 'expanded') {
+      document.documentElement.classList.add('sidebar-expanded');
+    }
+  </script>
+  <style>
+    /* Override collapsed state if localStorage says expanded */
+    html.sidebar-expanded .sidebar.collapsed { width: 220px; border-right: 1px solid var(--border-color); }
+  </style>
 </head>
 <body>
   <!-- Sidebar (starts collapsed, JS expands if user preference) -->
@@ -63,6 +73,7 @@
         <strong>Last update:</strong> <code id="last-update">Never</code>
         <span id="elapsed-time"></span>
       </span>
+      <span class="topbar-version" id="version-info"></span>
     </div>
 
     <main class="main-content">
@@ -227,8 +238,19 @@
 
     menuToggle.addEventListener('click', () => {
       sidebar.classList.toggle('collapsed');
-      localStorage.setItem(SIDEBAR_KEY, sidebar.classList.contains('collapsed') ? 'collapsed' : 'expanded');
+      const isCollapsed = sidebar.classList.contains('collapsed');
+      localStorage.setItem(SIDEBAR_KEY, isCollapsed ? 'collapsed' : 'expanded');
+      document.documentElement.classList.toggle('sidebar-expanded', !isCollapsed);
     });
+
+    // Load version info
+    fetch('/version.json')
+      .then(r => r.json())
+      .then(v => {
+        document.getElementById('version-info').innerHTML =
+          `v${v.version} (<code>${v.git_hash}</code>) &bull; ${v.build_time}`;
+      })
+      .catch(() => {});
   </script>
 </body>
 </html>

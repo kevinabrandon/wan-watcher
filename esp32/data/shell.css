@@ -169,6 +169,19 @@ body {
     color: var(--text-secondary);
 }
 
+.topbar-version {
+    margin-left: auto;
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.topbar-version code {
+    background: var(--bg-tertiary);
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-family: "SF Mono", Consolas, monospace;
+}
+
 .main-content {
     flex: 1;
     overflow-y: auto;
