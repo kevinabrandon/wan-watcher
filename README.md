@@ -66,16 +66,11 @@ wan-watcher/
   pf/            # pfSense scripts (cron polling, dpinger, usage)
   esp32/         # ESP32 firmware (LEDs, 7-seg, API endpoints)
     data/        # Web UI files (HTML, CSS, JS)
-  docs/
+  docs/          # Contains various markdown documentation
     diagrams/    # Circuit diagrams
-    api.md
-    hardware.md
-    pfsense-install.md
-    technical-notes.md
   images/        # Screenshots and photos
-  README.md
+  README.md      # This readme here
   package.json   # CDN dependency tracking for Dependabot alerts
-  .gitignore
 ```
 
 ---
