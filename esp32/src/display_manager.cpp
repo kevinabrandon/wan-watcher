@@ -51,17 +51,30 @@ void DisplayManager::begin(const DisplaySystemConfig& config,
         }
     }
 
-    // Initialize local pinger display at index 4 (0x75)
+    // Initialize local pinger packet display at index 4 (0x75)
     // wan_id=0 signals to use local_pinger_get() instead of wan_metrics_get()
     const int LOCAL_PINGER_IDX = 4;
     if (_displays[LOCAL_PINGER_IDX].begin(LOCAL_PINGER_DISPLAY_ADDR, wire)) {
         _displays[LOCAL_PINGER_IDX].configure(DisplayType::PACKET, 0);  // wan_id=0 for local pinger
         _active_count++;
-        Serial.printf("Display %d (Local Pinger) at 0x%02X: OK\n",
+        Serial.printf("Display %d (Local Packet) at 0x%02X: OK\n",
                       LOCAL_PINGER_IDX, LOCAL_PINGER_DISPLAY_ADDR);
     } else {
-        Serial.printf("Display %d (Local Pinger) at 0x%02X: not found\n",
+        Serial.printf("Display %d (Local Packet) at 0x%02X: not found\n",
                       LOCAL_PINGER_IDX, LOCAL_PINGER_DISPLAY_ADDR);
+    }
+
+    // Initialize local bandwidth display at index 5 (0x76)
+    // wan_id=0 signals to sum WAN1 + WAN2 bandwidth
+    const int LOCAL_BW_IDX = 5;
+    if (_displays[LOCAL_BW_IDX].begin(LOCAL_BW_DISPLAY_ADDR, wire)) {
+        _displays[LOCAL_BW_IDX].configure(DisplayType::BANDWIDTH, 0);  // wan_id=0 for combined bandwidth
+        _active_count++;
+        Serial.printf("Display %d (Local Bandwidth) at 0x%02X: OK\n",
+                      LOCAL_BW_IDX, LOCAL_BW_DISPLAY_ADDR);
+    } else {
+        Serial.printf("Display %d (Local Bandwidth) at 0x%02X: not found\n",
+                      LOCAL_BW_IDX, LOCAL_BW_DISPLAY_ADDR);
     }
 
     // Initial sync and render

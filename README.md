@@ -46,7 +46,7 @@ wan-watcher collects real-time WAN metrics from pfSense (latency, loss, jitter, 
   * Independent ICMP pinger to a configurable target
   * Calculates latency, jitter, and loss percentage
   * Bicolor LED for local path
-  * Separate 7-segment display for local packet stats
+  * Dual 7-segment displays for local metrics (packet stats + combined WAN bandwidth)
 
 ---
 
