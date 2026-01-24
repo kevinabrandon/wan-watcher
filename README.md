@@ -55,7 +55,7 @@ wan-watcher collects real-time WAN metrics from pfSense (latency, loss, jitter, 
 * **[Hardware and Wiring](./docs/hardware.md)**: Details on the components, pin mappings, and circuit diagram.
 * **[pfSense Installation](./docs/pfsense-install.md)**: How to install the daemon on pfSense.
 * **[JSON API Reference](./docs/api.md)**: API endpoints and payload formats.
-* **[Troubleshooting](./docs/troubleshooting.md)**: Information on failure behavior and security.
+* **[Technical Notes](./docs/technical-notes.md)**: Failure behavior, security, and external dependencies.
 
 ---
 
@@ -71,9 +71,10 @@ wan-watcher/
     api.md
     hardware.md
     pfsense-install.md
-    troubleshooting.md
+    technical-notes.md
   images/        # Screenshots and photos
   README.md
+  package.json   # CDN dependency tracking for Dependabot alerts
   .gitignore
 ```
 

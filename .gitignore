@@ -7,6 +7,10 @@ esp32/.gcc-flags.json
 # Generated at build time (see extra_scripts/update_version.py)
 esp32/data/docs/
 
+# npm (package.json is only for Dependabot alerts)
+node_modules/
+package-lock.json
+
 # OS junk
 .DS_Store
 Thumbs.db

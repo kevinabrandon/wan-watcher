@@ -1,0 +1,10 @@
+{
+  "name": "wan-watcher",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Dependency tracking for Dependabot alerts (CDN-loaded libraries)",
+  "dependencies": {
+    "marked": "15.0.12",
+    "rapidoc": "9.3.8"
+  }
+}
