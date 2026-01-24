@@ -136,7 +136,7 @@
       digit.querySelector('.seg-dp').classList.toggle('on',false);
     }
   }
-  ['w1-pkt','w1-bw','w2-pkt','w2-bw','lp-pkt'].forEach(initDisplay);
+  ['w1-pkt','w1-bw','w2-pkt','w2-bw','lp-pkt','lp-bw'].forEach(initDisplay);
 
   var pktIdx=0,bwIdx=0;
   var P=document.getElementById('seg-panel').dataset;
@@ -192,6 +192,12 @@
     }else{
       setDisplay('lp-pkt',pm,[P.lpLat,P.lpJit,P.lpLoss][pktIdx]);
     }
+    // Local bandwidth is sum of WAN1 + WAN2 (show dashes if stale)
+    if(stale){
+      setDisplayDashes('lp-bw');
+    }else{
+      setDisplay('lp-bw',bm,[P.lpDown,P.lpUp][bwIdx]);
+    }
   }
   updDisp();
   document.querySelectorAll('.pkt-display').forEach(function(e){
@@ -233,6 +239,7 @@
       P.w2State=d.wan2.state;P.w2Lat=d.wan2.latency_ms;P.w2Jit=d.wan2.jitter_ms;P.w2Loss=d.wan2.loss_pct;
       P.w2Down=w2bw.down.toFixed(1);P.w2Up=w2bw.up.toFixed(1);
       P.lpState=d.local.state;P.lpLat=d.local.latency_ms;P.lpJit=d.local.jitter_ms;P.lpLoss=d.local.loss_pct;
+      P.lpDown=(w1bw.down+w2bw.down).toFixed(1);P.lpUp=(w1bw.up+w2bw.up).toFixed(1);
       updLeds();
       updDisp();
       // Update timestamp
