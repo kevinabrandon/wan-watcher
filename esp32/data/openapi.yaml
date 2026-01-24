@@ -7,7 +7,7 @@ info:
 
     The ESP32 receives WAN metrics from a pfSense daemon and provides local network
     monitoring via its own pinger.
-  version: 1.1.0-3-g485dfcc
+  version: 1.1.1
   contact:
     url: https://github.com/kevinabrandon/wan-watcher
 
