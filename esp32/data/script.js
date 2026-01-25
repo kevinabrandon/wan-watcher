@@ -1,15 +1,6 @@
 (function(){
   // === Shared state ===
   var updateTime = null;
-  var el = document.getElementById('last-update');
-  if (el && el.dataset.iso) {
-    updateTime = new Date(el.dataset.iso);
-    if (!isNaN(updateTime)) {
-      el.textContent = updateTime.toLocaleString();
-    } else {
-      updateTime = null;
-    }
-  }
 
   // === Freshness bar (24 discrete LEDs matching hardware) ===
   var bar = document.getElementById('freshness-bar');
@@ -103,10 +94,12 @@
   }
   function initDisplay(id){
     var el=document.getElementById(id);
+    if (!el) return;
     for(var i=0;i<4;i++)el.appendChild(mkDigit());
   }
   function setDisplay(id,prefix,val){
     var el=document.getElementById(id);
+    if (!el) return;
     var digits=el.querySelectorAll('.digit');
     var v=val.toString();
     var hasDP=v.indexOf('.')>=0;
@@ -127,6 +120,7 @@
   }
   function setDisplayDashes(id){
     var el=document.getElementById(id);
+    if (!el) return;
     var digits=el.querySelectorAll('.digit');
     for(var i=0;i<4;i++){
       var digit=digits[i];
@@ -217,7 +211,7 @@
 
   // === Bandwidth source selection ===
   function getBwSource(){
-    var sel=document.querySelector('input[name="bw-source"]:checked');
+    var sel=document.querySelector('input[name="bw-source"]:checked, input[name="bw-source-m"]:checked');
     return sel?sel.value:'1m';
   }
   function getBwValues(wan,src){
@@ -227,9 +221,25 @@
     return{down:wan.down_1m,up:wan.up_1m}; // default 1m
   }
 
+  // === Formatting helpers ===
+  var $=function(id){return document.getElementById(id);};
+  var setText=function(id,val){var e=$(id);if(e)e.textContent=val;var m=$(id+'-m');if(m)m.textContent=val;};
+  // Pad number to 3 chars with leading non-breaking spaces, add " ms"
+  var fmtMs=function(n){var s=String(n);while(s.length<3)s='\u00A0'+s;return s+' ms';};
+  // Pad number to 3 chars with leading non-breaking spaces, add "%"
+  var fmtPct=function(n){var s=String(n);while(s.length<3)s='\u00A0'+s;return s+'%';};
+  // Pad number to 5 chars (XXX.X format) with leading non-breaking spaces
+  var padBw=function(n){var s=n.toFixed(1);while(s.length<5)s='\u00A0'+s;return s;};
+  // Format bandwidth pair
+  var fmtBw=function(down,up){return padBw(down)+'/'+padBw(up);};
+
   // === Fetch data ===
   function fetchData(){
-    fetch('/api/status').then(function(r){return r.json();}).then(function(d){
+    fetch('/api/status').then(function(r){
+      if(!r.ok)throw new Error('HTTP '+r.status);
+      return r.json();
+    }).then(function(d){
+      if(!d||!d.wan1||!d.wan2||!d.local)throw new Error('Invalid response');
       // Update 7-segment data using selected bandwidth source
       var bwSrc=getBwSource();
       var w1bw=getBwValues(d.wan1,bwSrc);
@@ -258,46 +268,41 @@
         F.redBufferEnd=d.freshness.red_buffer_end;
         F.fillDuration=d.freshness.fill_duration;
       }
-      // Update table cells
-      var $=function(id){return document.getElementById(id);};
-      if(d.hostname){
-        $('hostname').textContent=d.hostname;
-        $('hostname-table').textContent=d.hostname;
-      }
+      // Update table cells (both wide and narrow versions)
       $('w1-state').innerHTML=stateHtml(d.wan1.state);
       $('w1-mon').textContent=d.wan1.monitor_ip||'';
       $('w1-gw').textContent=d.wan1.gateway_ip||'';
       $('w1-lip').textContent=d.wan1.local_ip||'';
-      $('w1-loss').textContent=d.wan1.loss_pct+'%';
-      $('w1-lat').textContent=d.wan1.latency_ms+' ms';
-      $('w1-jit').textContent=d.wan1.jitter_ms+' ms';
-      $('w1-bw15').textContent=d.wan1.down_mbps.toFixed(1)+' / '+d.wan1.up_mbps.toFixed(1);
-      $('w1-avg1').textContent=d.wan1.down_1m.toFixed(1)+' / '+d.wan1.up_1m.toFixed(1);
-      $('w1-avg5').textContent=d.wan1.down_5m.toFixed(1)+' / '+d.wan1.up_5m.toFixed(1);
-      $('w1-avg15').textContent=d.wan1.down_15m.toFixed(1)+' / '+d.wan1.up_15m.toFixed(1);
+      setText('w1-loss',fmtPct(d.wan1.loss_pct));
+      setText('w1-lat',fmtMs(d.wan1.latency_ms));
+      setText('w1-jit',fmtMs(d.wan1.jitter_ms));
+      setText('w1-bw15',fmtBw(d.wan1.down_mbps,d.wan1.up_mbps));
+      setText('w1-avg1',fmtBw(d.wan1.down_1m,d.wan1.up_1m));
+      setText('w1-avg5',fmtBw(d.wan1.down_5m,d.wan1.up_5m));
+      setText('w1-avg15',fmtBw(d.wan1.down_15m,d.wan1.up_15m));
       $('w2-state').innerHTML=stateHtml(d.wan2.state);
       $('w2-mon').textContent=d.wan2.monitor_ip||'';
       $('w2-gw').textContent=d.wan2.gateway_ip||'';
       $('w2-lip').textContent=d.wan2.local_ip||'';
-      $('w2-loss').textContent=d.wan2.loss_pct+'%';
-      $('w2-lat').textContent=d.wan2.latency_ms+' ms';
-      $('w2-jit').textContent=d.wan2.jitter_ms+' ms';
-      $('w2-bw15').textContent=d.wan2.down_mbps.toFixed(1)+' / '+d.wan2.up_mbps.toFixed(1);
-      $('w2-avg1').textContent=d.wan2.down_1m.toFixed(1)+' / '+d.wan2.up_1m.toFixed(1);
-      $('w2-avg5').textContent=d.wan2.down_5m.toFixed(1)+' / '+d.wan2.up_5m.toFixed(1);
-      $('w2-avg15').textContent=d.wan2.down_15m.toFixed(1)+' / '+d.wan2.up_15m.toFixed(1);
+      setText('w2-loss',fmtPct(d.wan2.loss_pct));
+      setText('w2-lat',fmtMs(d.wan2.latency_ms));
+      setText('w2-jit',fmtMs(d.wan2.jitter_ms));
+      setText('w2-bw15',fmtBw(d.wan2.down_mbps,d.wan2.up_mbps));
+      setText('w2-avg1',fmtBw(d.wan2.down_1m,d.wan2.up_1m));
+      setText('w2-avg5',fmtBw(d.wan2.down_5m,d.wan2.up_5m));
+      setText('w2-avg15',fmtBw(d.wan2.down_15m,d.wan2.up_15m));
       $('lp-state').innerHTML=stateHtml(d.local.state);
       $('lp-mon').textContent=d.local.monitor_ip||'';
       $('lp-gw').textContent=d.router_ip||'';
       $('lp-lip').textContent=d.local.local_ip||'';
-      $('lp-lat').textContent=d.local.latency_ms+' ms';
-      $('lp-jit').textContent=d.local.jitter_ms+' ms';
-      $('lp-loss').textContent=d.local.loss_pct+'%';
+      setText('lp-lat',fmtMs(d.local.latency_ms));
+      setText('lp-jit',fmtMs(d.local.jitter_ms));
+      setText('lp-loss',fmtPct(d.local.loss_pct));
       // Sum WAN1 + WAN2 bandwidth for local row
-      $('lp-bw15').textContent=(d.wan1.down_mbps+d.wan2.down_mbps).toFixed(1)+' / '+(d.wan1.up_mbps+d.wan2.up_mbps).toFixed(1);
-      $('lp-avg1').textContent=(d.wan1.down_1m+d.wan2.down_1m).toFixed(1)+' / '+(d.wan1.up_1m+d.wan2.up_1m).toFixed(1);
-      $('lp-avg5').textContent=(d.wan1.down_5m+d.wan2.down_5m).toFixed(1)+' / '+(d.wan1.up_5m+d.wan2.up_5m).toFixed(1);
-      $('lp-avg15').textContent=(d.wan1.down_15m+d.wan2.down_15m).toFixed(1)+' / '+(d.wan1.up_15m+d.wan2.up_15m).toFixed(1);
+      setText('lp-bw15',fmtBw(d.wan1.down_mbps+d.wan2.down_mbps,d.wan1.up_mbps+d.wan2.up_mbps));
+      setText('lp-avg1',fmtBw(d.wan1.down_1m+d.wan2.down_1m,d.wan1.up_1m+d.wan2.up_1m));
+      setText('lp-avg5',fmtBw(d.wan1.down_5m+d.wan2.down_5m,d.wan1.up_5m+d.wan2.up_5m));
+      setText('lp-avg15',fmtBw(d.wan1.down_15m+d.wan2.down_15m,d.wan1.up_15m+d.wan2.up_15m));
     }).catch(function(e){console.error('Fetch error:',e);});
   }
   fetchData(); // Run immediately
@@ -327,13 +332,8 @@
 
     // Show pot level and override status
     var potText = 'Pot: ' + potLevel;
-    if (currentBrightness !== potLevel) {
-      brightnessPotStatus.textContent = potText;
-      brightnessPotStatus.style.color = '#f39c12';
-    } else {
-      brightnessPotStatus.textContent = potText;
-      brightnessPotStatus.style.color = '#999';
-    }
+    brightnessPotStatus.textContent = potText;
+    brightnessPotStatus.classList.toggle('override', currentBrightness !== potLevel);
   }
 
   function fetchBrightnessState() {
@@ -415,7 +415,7 @@
     powerCheckbox.checked = displaysOn;
     // Show switch position (color indicates override)
     switchStatus.textContent = 'Switch: ' + (switchPosition ? 'ON' : 'OFF');
-    switchStatus.style.color = (displaysOn !== switchPosition) ? '#f39c12' : '#999';
+    switchStatus.classList.toggle('override', displaysOn !== switchPosition);
   }
 
   function fetchPowerState() {
@@ -441,14 +441,21 @@
   setInterval(fetchPowerState, 2000);
 
   // === Bandwidth source selection ===
+  function syncBwRadios(source) {
+    var radio = document.getElementById('bw-' + source);
+    var radioM = document.getElementById('bw-' + source + '-m');
+    if (radio) radio.checked = true;
+    if (radioM) radioM.checked = true;
+  }
+
   function fetchBwSource() {
     fetch('/api/bw-source').then(function(r) { return r.json(); }).then(function(d) {
-      var radio = document.getElementById('bw-' + d.source);
-      if (radio) radio.checked = true;
+      syncBwRadios(d.source);
     }).catch(function(e) { console.error('BW source fetch error:', e); });
   }
 
   function postBwSource(source) {
+    syncBwRadios(source);
     fetch('/api/bw-source', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
@@ -456,8 +463,8 @@
     }).catch(function(e) { console.error('BW source post error:', e); });
   }
 
-  // Add event listeners to bandwidth source radio buttons
-  document.querySelectorAll('input[name="bw-source"]').forEach(function(radio) {
+  // Add event listeners to bandwidth source radio buttons (both wide and narrow)
+  document.querySelectorAll('input[name="bw-source"], input[name="bw-source-m"]').forEach(function(radio) {
     radio.addEventListener('change', function() {
       postBwSource(this.value);
     });

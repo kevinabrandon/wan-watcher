@@ -4,10 +4,10 @@
 .freshness-bar {
   display: flex;
   height: 20px;
-  border: 1px solid #555;
+  border: 1px solid var(--border-color);
   border-radius: 4px;
   overflow: hidden;
-  background: #222;
+  background: var(--bg-tertiary);
   gap: 2px;
   padding: 2px;
   width: 180px;
@@ -17,23 +17,24 @@
   flex: 1;
   height: 100%;
   border-radius: 2px;
-  background: #333;
+  background: var(--border-color);
   transition: background-color 0.1s;
 }
-.freshness-led.green { background: #2ecc71; box-shadow: 0 0 4px #2ecc71; }
-.freshness-led.yellow { background: #f1c40f; box-shadow: 0 0 4px #f1c40f; }
-.freshness-led.red { background: #e74c3c; box-shadow: 0 0 4px #e74c3c; }
+.freshness-led.green { background: var(--success); box-shadow: 0 0 4px var(--success); }
+.freshness-led.yellow { background: var(--warning); box-shadow: 0 0 4px var(--warning); }
+.freshness-led.red { background: var(--danger); box-shadow: 0 0 4px var(--danger); }
 .freshness-bar.blink .freshness-led.red { animation: led-blink 0.5s infinite; }
-@keyframes led-blink { 50% { background: #333; box-shadow: none; } }
+@keyframes led-blink { 50% { background: var(--border-color); box-shadow: none; } }
 
 /* 7-segment display panel */
 .display-panel {
-  background: #2a2a2a;
+  background: var(--bg-panel);
   padding: 1rem;
   border-radius: 8px;
-  margin: 1rem 0;
-  display: inline-block;
-  border: 2px solid #444;
+  margin: 1rem auto;
+  display: block;
+  width: fit-content;
+  border: 2px solid var(--border-color);
 }
 .display-grid {
   display: grid;
@@ -42,21 +43,21 @@
   align-items: center;
 }
 .display-grid .row-label {
-  color: #ccc;
+  color: var(--text-primary);
   font-size: 0.9em;
   font-weight: bold;
   text-align: right;
   padding-right: 8px;
 }
 .display-grid .col-header {
-  color: #aaa;
+  color: var(--text-secondary);
   font-size: 0.8em;
   font-weight: bold;
   text-align: center;
 }
 .seg-display {
   display: inline-flex;
-  background: #111;
+  background: var(--bg-secondary);
   padding: 8px 12px;
   border-radius: 6px;
   cursor: pointer;
@@ -70,7 +71,7 @@
   gap: 16px;
   margin-bottom: 12px;
   padding-bottom: 12px;
-  border-bottom: 1px solid #444;
+  border-bottom: 1px solid var(--border-color);
 }
 .power-toggle-panel {
   display: flex;
@@ -78,7 +79,7 @@
   gap: 8px;
 }
 .power-toggle-panel label {
-  color: #ccc;
+  color: var(--text-primary);
   font-size: 0.8em;
 }
 .brightness-panel {
@@ -88,7 +89,7 @@
   flex-shrink: 0;
 }
 .brightness-panel span {
-  color: #ccc;
+  color: var(--text-primary);
   font-size: 0.8em;
   min-width: 1.5em;
 }
@@ -129,13 +130,13 @@
   width: 16px;
   height: 16px;
   border-radius: 50%;
-  border: 1px solid #555;
+  border: 1px solid var(--border-color);
 }
-.state-led.off { background: #333; }
-.state-led.green { background: #2ecc71; box-shadow: 0 0 8px #2ecc71; }
-.state-led.yellow { background: #f1c40f; box-shadow: 0 0 8px #f1c40f; }
-.state-led.red { background: #e74c3c; box-shadow: 0 0 8px #e74c3c; }
-.state-led.blink-red { background: #e74c3c; box-shadow: 0 0 8px #e74c3c; animation: led-blink 0.5s infinite; }
+.state-led.off { background: var(--border-color); }
+.state-led.green { background: var(--success); box-shadow: 0 0 8px var(--success); }
+.state-led.yellow { background: var(--warning); box-shadow: 0 0 8px var(--warning); }
+.state-led.red { background: var(--danger); box-shadow: 0 0 8px var(--danger); }
+.state-led.blink-red { background: var(--danger); box-shadow: 0 0 8px var(--danger); animation: led-blink 0.5s infinite; }
 
 /* 7-segment digits */
 .digit {
@@ -146,7 +147,7 @@
 }
 .seg {
   position: absolute;
-  background: #222;
+  background: var(--bg-tertiary);
   border-radius: 2px;
 }
 .seg.on {
@@ -176,7 +177,7 @@
   right: -3px;
   bottom: 2px;
   border-radius: 50%;
-  background: #222;
+  background: var(--bg-tertiary);
 }
 .seg-dp.on {
   background: #f00;
@@ -186,11 +187,14 @@
 /* Status indicators */
 .override-indicator {
   font-size: 0.7em;
-  color: #f39c12;
+  color: var(--warning);
 }
 .switch-status {
   font-size: 0.7em;
-  color: #999;
+  color: var(--text-muted);
+}
+.switch-status.override {
+  color: var(--warning);
 }
 
 /* Vertical Toggle Switch */
@@ -199,9 +203,9 @@
   display: inline-block;
   width: 34px;
   height: 60px;
-  background-color: #222;
+  background-color: var(--bg-tertiary);
   border-radius: 17px;
-  border: 1px solid #555;
+  border: 1px solid var(--border-color);
   cursor: pointer;
   box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);
 }
@@ -213,7 +217,7 @@
   text-align: center;
   font-size: 0.6em;
   font-weight: bold;
-  color: #888;
+  color: var(--text-secondary);
   transition: color 0.3s ease-in-out;
   -webkit-user-select: none;
   -moz-user-select: none;
@@ -244,10 +248,84 @@
 .v-toggle-switch input:not(:checked) ~ .v-slider {
   transform: translateY(30px);
 }
-.v-toggle-switch input:checked ~ .on-label { color: #2ecc71; }
-.v-toggle-switch input:not(:checked) ~ .off-label { color: #fff; }
+.v-toggle-switch input:checked ~ .on-label { color: var(--success); }
+.v-toggle-switch input:not(:checked) ~ .off-label { color: var(--text-bright); }
 
-/* Radio button styling for dark theme */
-input[type="radio"] {
-  accent-color: #0f0;
+/* Radio button and checkbox styling for dark theme */
+input[type="radio"],
+input[type="checkbox"] {
+  accent-color: var(--accent);
+}
+
+input[type="radio"]:focus-visible,
+input[type="checkbox"]:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Metrics tables - wide/narrow toggle */
+.metrics-tables-narrow {
+  display: none;
+}
+
+/* Mobile responsive styles for dashboard */
+@media (max-width: 768px) {
+  .metrics-table-wide {
+    display: none;
+  }
+  .metrics-tables-narrow {
+    display: block;
+  }
+  .display-panel {
+    transform: scale(0.85);
+    transform-origin: top left;
+    margin: 1rem 0;
+    margin-bottom: -45px;
+  }
+  .control-row {
+    gap: 12px;
+  }
+  .freshness-bar {
+    width: 140px;
+  }
+}
+
+@media (max-width: 480px) {
+  .display-panel {
+    transform: scale(0.7);
+    margin-bottom: -90px;
+  }
+
+  .display-grid {
+    gap: 15px 15px;
+  }
+
+  .freshness-bar {
+    width: 100px;
+  }
+
+  .digit {
+    width: 22px;
+    height: 40px;
+  }
+
+  .seg-a, .seg-d, .seg-g {
+    width: 14px;
+    height: 4px;
+    left: 4px;
+  }
+
+  .seg-a { top: 0; }
+  .seg-g { top: 17px; }
+  .seg-d { top: 35px; }
+
+  .seg-b, .seg-c, .seg-e, .seg-f {
+    width: 4px;
+    height: 14px;
+  }
+
+  .seg-f { left: 0; top: 2px; }
+  .seg-b { right: 0; top: 2px; }
+  .seg-e { left: 0; top: 20px; }
+  .seg-c { right: 0; top: 20px; }
 }
