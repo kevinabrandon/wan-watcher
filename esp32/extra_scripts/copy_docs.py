@@ -16,11 +16,37 @@ from datetime import datetime, timezone
 Import("env")
 
 
+def is_git_dirty():
+    """Check if working tree has uncommitted changes."""
+    try:
+        output = subprocess.check_output(
+            ["git", "status", "--porcelain"],
+            stderr=subprocess.DEVNULL
+        ).decode().strip()
+        return len(output) > 0
+    except Exception:
+        return False
+
+
 def get_git_hash():
-    """Get short git commit hash."""
+    """Get short git commit hash, with * suffix if dirty."""
+    try:
+        hash = subprocess.check_output(
+            ["git", "rev-parse", "--short", "HEAD"],
+            stderr=subprocess.DEVNULL
+        ).decode().strip()
+        if is_git_dirty():
+            hash += "*"
+        return hash
+    except Exception:
+        return "unknown"
+
+
+def get_git_hash_full():
+    """Get full git commit hash."""
     try:
         return subprocess.check_output(
-            ["git", "rev-parse", "--short", "HEAD"],
+            ["git", "rev-parse", "HEAD"],
             stderr=subprocess.DEVNULL
         ).decode().strip()
     except Exception:
@@ -48,6 +74,7 @@ def generate_version_json(source, target, env):
     version_info = {
         "version": get_openapi_version(project_dir),
         "git_hash": get_git_hash(),
+        "git_hash_full": get_git_hash_full(),
         "build_time": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
     }
 
