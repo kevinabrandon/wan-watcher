@@ -209,6 +209,14 @@
     return'\u{1F534} DOWN';
   }
 
+  // === Dynamic favicon based on local pinger state ===
+  var faviconLink = document.querySelector('link[rel="icon"]');
+  function updateFavicon(state) {
+    if (!faviconLink) return;
+    var color = state === 'up' ? 'green' : state === 'degraded' ? 'yellow' : 'red';
+    faviconLink.href = '/favicon-' + color + '.svg';
+  }
+
   // === Bandwidth source selection ===
   function getBwSource(){
     var sel=document.querySelector('input[name="bw-source"]:checked, input[name="bw-source-m"]:checked');
@@ -252,6 +260,7 @@
       P.lpDown=(w1bw.down+w2bw.down).toFixed(1);P.lpUp=(w1bw.up+w2bw.up).toFixed(1);
       updLeds();
       updDisp();
+      updateFavicon(d.local.state);
       // Update timestamp
       if(d.timestamp){
         updateTime=new Date(d.timestamp);
