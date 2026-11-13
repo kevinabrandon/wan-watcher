@@ -464,6 +464,60 @@ components:
           $ref: '#/components/schemas/WanUpdatePayload'
         wan2:
           $ref: '#/components/schemas/WanUpdatePayload'
+        top_talkers:
+          $ref: '#/components/schemas/TopTalkers'
+
+    TopTalkers:
+      type: object
+      description: |
+        Optional. Top LAN hosts by bandwidth, one list per bandwidth window
+        (keys match the `/api/bw-source` values). Derived from pf state byte
+        counters on the router, so values are an approximation of current usage.
+        Currently accepted and ignored by the ESP32.
+      properties:
+        15s:
+          type: array
+          items:
+            $ref: '#/components/schemas/TopTalkerEntry'
+        1m:
+          type: array
+          items:
+            $ref: '#/components/schemas/TopTalkerEntry'
+        5m:
+          type: array
+          items:
+            $ref: '#/components/schemas/TopTalkerEntry'
+        15m:
+          type: array
+          items:
+            $ref: '#/components/schemas/TopTalkerEntry'
+
+    TopTalkerEntry:
+      type: object
+      properties:
+        ip:
+          type: string
+          format: ipv4
+          description: LAN host address
+        name:
+          type: string
+          description: Hostname from DHCP (static mapping or lease); empty when unknown
+          example: nas
+        down:
+          type: number
+          format: float
+          description: Download Mbps for the window
+        up:
+          type: number
+          format: float
+          description: Upload Mbps for the window
+        wan:
+          type: string
+          enum:
+            - wan1
+            - wan2
+            - ""
+          description: WAN that carried most of this host's traffic in the window
 
     WanUpdateResponseItem:
       type: object
