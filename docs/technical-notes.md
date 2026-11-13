@@ -8,8 +8,9 @@
 ### Security Notes
 
 - Intended for a trusted VLAN
-- No authentication by default
+- No authentication by default on the HTTP API
 - Do not expose the ESP32 API to untrusted networks
+- OTA updates (port 3232) are password protected; the password is set at build time from `WW_OTA_PASSWORD` and OTA is disabled when it is empty. See `esp32/README.md`.
 
 ### External Dependencies
 
