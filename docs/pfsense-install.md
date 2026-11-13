@@ -1,11 +1,13 @@
 ## Installation (pfSense)
 
-### 1. Install the daemon
+### 1. Install the scripts
 
 ```sh
-cp pf/wan_watcher_daemon.sh /usr/local/bin/
-chmod +x /usr/local/bin/wan_watcher_daemon.sh
+cp pf/wan_watcher_daemon.sh pf/wan_watcher_start.sh /usr/local/bin/
+chmod +x /usr/local/bin/wan_watcher_daemon.sh /usr/local/bin/wan_watcher_start.sh
 ```
+
+`wan_watcher_daemon.sh` is the collector. `wan_watcher_start.sh` launches it under `daemon(8)` and installs the log rotation rule (see below).
 
 ### 2. Install Shellcmd
 
@@ -25,7 +27,7 @@ Set:
 * **Command:**
 
   ```sh
-  /usr/sbin/daemon -f -p /var/run/wan_watcher.pid sh -c '/usr/local/bin/wan_watcher_daemon.sh >> /var/log/wan_watcher.log 2>&1'
+  /usr/local/bin/wan_watcher_start.sh
   ```
 * **Type:** `shellcmd`
 
@@ -36,7 +38,7 @@ Save.
 Shellcmd runs at boot. To start without rebooting:
 
 ```sh
-/usr/sbin/daemon -f -p /var/run/wan_watcher.pid sh -c '/usr/local/bin/wan_watcher_daemon.sh >> /var/log/wan_watcher.log 2>&1'
+/usr/local/bin/wan_watcher_start.sh
 ```
 
 ### 5. Verify
@@ -50,8 +52,18 @@ tail -f /var/log/wan_watcher.log
 #### Stop / restart
 
 ```sh
-kill "$(cat /var/run/wan_watcher.pid)"
-/usr/sbin/daemon -f -p /var/run/wan_watcher.pid sh -c '/usr/local/bin/wan_watcher_daemon.sh >> /var/log/wan_watcher.log 2>&1'
+kill "$(cat /var/run/wan_watcher_sup.pid)" "$(cat /var/run/wan_watcher.pid)"
+/usr/local/bin/wan_watcher_start.sh
+```
+
+### Log rotation
+
+The daemon logs one line per cycle (about 4 MB/day). `wan_watcher_start.sh` writes `/var/etc/newsyslog.conf.d/wan_watcher.conf`, which makes pfSense's `newsyslog` (run from cron every minute) rotate `/var/log/wan_watcher.log` at 10 MB and keep 7 gzip'd copies. After each rotation newsyslog sends `SIGHUP` to the `daemon(8)` supervisor (pid in `/var/run/wan_watcher_sup.pid`), which reopens the new file; this is why the daemon is started with `daemon -o` rather than a shell `>>` redirect.
+
+The rule is rewritten on every start because pfSense regenerates `/var/etc`. To rotate by hand:
+
+```sh
+newsyslog -F /var/log/wan_watcher.log
 ```
 
 ### Environment overrides
