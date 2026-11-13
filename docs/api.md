@@ -200,9 +200,29 @@ Batch update endpoint for WAN metrics from pfSense.
     "local_ip": "192.168.100.2",
     "gateway_ip": "192.168.100.1",
     "monitor_ip": "1.1.1.1"
+  },
+  "top_talkers": {
+    "15s": [
+      { "ip": "192.168.1.4", "name": "nas", "down": 46.75, "up": 1.69, "wan": "wan1" },
+      { "ip": "192.168.1.66", "name": "roku", "down": 6.25, "up": 0.05, "wan": "wan2" }
+    ],
+    "1m":  [ ... ],
+    "5m":  [ ... ],
+    "15m": [ ... ]
   }
 }
 ```
+
+`top_talkers` is optional. Each key is one bandwidth window (matching the `/api/bw-source` values) and holds up to 5 LAN hosts ranked by `down + up` for that window:
+
+- `ip`: LAN host address
+- `name`: hostname from DHCP (static mapping or lease); empty string when unknown
+- `down` / `up`: Mbps as seen from the LAN host (15s = last sample; 1m/5m/15m = EWMA)
+- `wan`: `"wan1"`, `"wan2"`, or `""` for whichever WAN carried most of the host's traffic in that window
+
+The daemon derives these from `pfctl -vvs state` byte counters, so only connections still open at sample time are counted. Treat the values as an approximation of current usage, not accounting. Hosts drop out once idle for long enough that their 15m average falls below 10 kbps.
+
+> The ESP32 currently accepts and ignores `top_talkers`; surfacing it in `/api/status` and the Web UI is tracked in [todos](todos.md).
 
 **Response format:**
 ```json

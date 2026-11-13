@@ -16,6 +16,7 @@ wan-watcher collects real-time WAN metrics from pfSense (latency, loss, jitter, 
   * Polls dpinger sockets for latency / jitter / loss
   * Auto-maps each dpinger instance to its WAN interface
   * Calculates per-WAN bandwidth usage (Mbps), including 1m, 5m, and 15m Exponentially Weighted Moving Averages (EWMA)
+  * Reports the top LAN hosts by bandwidth ("top talkers") for each window, with DHCP hostnames and the WAN each host is using
   * Writes clean status/metrics files in `/var/run` for consumers
   * Supports multiple dpinger instances (e.g., WAN + WAN2)
   * Tracks per-WAN state and usage separately
