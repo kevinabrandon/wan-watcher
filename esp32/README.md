@@ -55,3 +55,4 @@ Notes:
 * The Olimex ESP32-POE-ISO is galvanically isolated, so it can stay on PoE while a USB cable is connected. Do not assume that for the non-ISO ESP32-POE.
 * `pio device monitor` only works over USB; OTA progress is printed to the serial console if one is attached.
 * A failed filesystem OTA leaves LittleFS unmounted until reboot; the web UI returns errors until then. Retry the upload or power-cycle the board.
+* `Sending invitation to wan-watcher.local failed` means the name did not resolve (typically for a few seconds after a reboot); `espota` gives up immediately rather than retrying. Wait a moment and retry, or upload by address: `--upload-port 192.168.1.9` (the router reserves this IP for the board).
