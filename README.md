@@ -24,6 +24,7 @@ wan-watcher collects real-time WAN metrics from pfSense (latency, loss, jitter, 
 
 * **ESP32 indicator panel**
   * Ethernet connectivity via Olimex ESP32-POE-ISO with mDNS (`wan-watcher.local`)
+  * Password-protected over-the-air updates of firmware and web UI (`pio run -e esp32-poe-iso-ota -t upload|uploadfs`)
   * Receives metrics via JSON API (`POST /api/wans` batch endpoint)
   * Bicolor LED indicators for WAN1, WAN2, and Local state (green=UP, yellow=DEGRADED, red=DOWN) via MCP23017 I2C expander
   * 24-segment bicolor LED bargraph showing data freshness

@@ -6,6 +6,7 @@
 
 #include "hostname.h"
 #include "leds.h"
+#include "ota.h"
 #include "http_routes.h"
 #include "wan_metrics.h"
 #include "display_config.h"
@@ -118,6 +119,7 @@ static void connect_ethernet_blocking() {
     Serial.println("Ethernet connected");
     g_led_status1.set(true);
     start_mdns(hostname.c_str());
+    ota_init(hostname.c_str());
 }
 
 void setup() {
@@ -165,6 +167,7 @@ void loop() {
         g_led_status1.set(get_displays_on());
     }
 
+    ota_handle();
     server.handleClient();
     power_switch_update();
     g_brightness_pot.update();
