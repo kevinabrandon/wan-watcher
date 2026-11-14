@@ -241,6 +241,37 @@
   // Format bandwidth pair
   var fmtBw=function(down,up){return padBw(down)+'/'+padBw(up);};
 
+  // === Top talkers (per-host usage from the daemon, follows the bandwidth source) ===
+  var ttData=null;
+  var ttLabels={'15s':'15s','1m':'Avg 1m','5m':'Avg 5m','15m':'Avg 15m'};
+  function escHtml(s){return String(s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+  // Prefer the WAN's description from the interface table (e.g. "Starlink"), else WAN1/WAN2
+  function wanLabel(w){
+    if(w!=='wan1'&&w!=='wan2')return'-';
+    var cell=document.querySelector('.interface-table tbody tr:nth-child('+(w==='wan1'?1:2)+') td:nth-child(2)');
+    var d=cell?cell.textContent.trim():'';
+    return d||w.toUpperCase();
+  }
+  function renderTopTalkers(){
+    var src=getBwSource();
+    var title=$('tt-title');if(title)title.textContent='Top talkers ('+(ttLabels[src]||src)+')';
+    var body=$('tt-body');if(!body)return;
+    var list=(ttData&&ttData[src])||[];
+    if(isStale()||!list.length){
+      body.innerHTML='<tr><td colspan="3" class="tt-empty">'+(isStale()?'No data (stale)':'No data')+'</td></tr>';
+      return;
+    }
+    var html='';
+    list.forEach(function(h){
+      var name=h.name||h.ip||'?';
+      var ip=h.name?'<span class="tt-ip">'+escHtml(h.ip||'')+'</span>':'';
+      html+='<tr><td><span class="tt-name">'+escHtml(name)+'</span>'+ip+'</td>'+
+            '<td class="tt-bw">'+fmtBw(+h.down||0,+h.up||0)+'</td>'+
+            '<td>'+escHtml(wanLabel(h.wan))+'</td></tr>';
+    });
+    body.innerHTML=html;
+  }
+
   // === Fetch data ===
   function fetchData(){
     fetch('/api/status').then(function(r){
@@ -312,6 +343,9 @@
       setText('lp-avg1',fmtBw(d.wan1.down_1m+d.wan2.down_1m,d.wan1.up_1m+d.wan2.up_1m));
       setText('lp-avg5',fmtBw(d.wan1.down_5m+d.wan2.down_5m,d.wan1.up_5m+d.wan2.up_5m));
       setText('lp-avg15',fmtBw(d.wan1.down_15m+d.wan2.down_15m,d.wan1.up_15m+d.wan2.up_15m));
+      // Top talkers for the selected window
+      ttData=d.top_talkers||null;
+      renderTopTalkers();
     }).catch(function(e){console.error('Fetch error:',e);});
   }
   fetchData(); // Run immediately
@@ -455,6 +489,7 @@
     var radioM = document.getElementById('bw-' + source + '-m');
     if (radio) radio.checked = true;
     if (radioM) radioM.checked = true;
+    renderTopTalkers();   // the top-talkers table follows the selected window
   }
 
   function fetchBwSource() {

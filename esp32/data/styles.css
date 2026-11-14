@@ -268,6 +268,22 @@ input[type="checkbox"]:focus-visible {
   display: none;
 }
 
+/* Top talkers table (same table in both layouts) */
+.top-talkers-table .tt-ip {
+  display: block;
+  color: var(--text-muted);
+  font-size: 0.85em;
+}
+
+.top-talkers-table td.tt-bw {
+  text-align: right;
+}
+
+.top-talkers-table .tt-empty {
+  color: var(--text-muted);
+  text-align: center;
+}
+
 /* Mobile responsive styles for dashboard */
 @media (max-width: 768px) {
   .metrics-table-wide {

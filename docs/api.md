@@ -66,9 +66,20 @@ Returns current metrics for all interfaces. Used by the Web UI for live updates.
     "red_buffer_end": 60,
     "fill_duration": 15,
     "led_count": 24
+  },
+  "top_talkers": {
+    "15s": [
+      { "ip": "192.168.1.4", "name": "nas", "down": 46.75, "up": 1.69, "wan": "wan1" },
+      { "ip": "192.168.1.66", "name": "roku", "down": 6.25, "up": 0.05, "wan": "wan2" }
+    ],
+    "1m":  [ ... ],
+    "5m":  [ ... ],
+    "15m": [ ... ]
   }
 }
 ```
+
+`top_talkers` is passed through from the last `POST /api/wans` (see below): up to 5 LAN hosts per bandwidth window, ranked by `down + up`. The lists are empty until a daemon that reports them has posted.
 
 ### GET /api/display-power
 
@@ -222,7 +233,7 @@ Batch update endpoint for WAN metrics from pfSense.
 
 The daemon derives these from `pfctl -vvs state` byte counters, so only connections still open at sample time are counted. Treat the values as an approximation of current usage, not accounting. Hosts drop out once idle for long enough that their 15m average falls below 10 kbps.
 
-> The ESP32 currently accepts and ignores `top_talkers`; surfacing it in `/api/status` and the Web UI is tracked in [todos](todos.md).
+The ESP32 stores the lists and returns them unchanged in `GET /api/status`; the Web UI shows the list for the selected bandwidth window under the bandwidth table.
 
 **Response format:**
 ```json

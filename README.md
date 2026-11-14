@@ -37,6 +37,7 @@ wan-watcher collects real-time WAN metrics from pfSense (latency, loss, jitter, 
   * Live-updating metrics table
   * Interface Status table
   * Selectable bandwidth display source
+  * Top talkers table: the LAN hosts using the most bandwidth for the selected window, with hostname and WAN
   * CSS-based 7-segment display panel mimicking the physical hardware
   * Virtual LEDs and freshness bar
   * Dynamic favicon color based on Local pinger state

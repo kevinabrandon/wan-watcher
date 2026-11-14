@@ -8,6 +8,7 @@
 #include "hostname.h"
 #include "leds.h"
 #include "wan_metrics.h"
+#include "top_talkers.h"
 #include "local_pinger.h"
 #include "freshness_bar.h"
 
@@ -133,6 +134,14 @@ static void handle_wans_post(WebServer& server) {
         parse_wan_json(wan2, 2);
     }
 
+    // Per-host top talkers (optional; older daemons do not send it)
+    if (doc["top_talkers"].is<JsonObjectConst>()) {
+        top_talkers_update(doc["top_talkers"].as<JsonObjectConst>());
+        Serial.printf("Top talkers updated: %d/%d/%d/%d hosts (15s/1m/5m/15m)\n",
+                      top_talkers_count(0), top_talkers_count(1),
+                      top_talkers_count(2), top_talkers_count(3));
+    }
+
     // Build response with all WANs
     JsonDocument resp;
     resp["status"] = "ok";
@@ -217,6 +226,9 @@ static void handle_status_get(WebServer& server) {
     freshness["red_buffer_end"] = FRESHNESS_RED_BUFFER_END_MS / 1000;
     freshness["fill_duration"] = FRESHNESS_FILL_DURATION_MS / 1000;
     freshness["led_count"] = TOTAL_LEDS;
+
+    // Top LAN hosts per bandwidth window, as last reported by the daemon
+    top_talkers_to_json(doc.as<JsonVariant>());
 
     String output;
     serializeJson(doc, output);
