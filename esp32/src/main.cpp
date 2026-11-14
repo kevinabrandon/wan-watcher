@@ -9,6 +9,7 @@
 #include "ota.h"
 #include "http_routes.h"
 #include "wan_metrics.h"
+#include "top_talkers.h"
 #include "display_config.h"
 #include "local_pinger.h"
 
@@ -128,8 +129,9 @@ void setup() {
     Serial.println();
     Serial.println("ESP32 LED webserver starting...");
 
-    // Initialize WAN metrics storage
+    // Initialize WAN metrics and top-talkers storage
     wan_metrics_init();
+    top_talkers_init();
 
     // Initialize I2C, MCP23017, displays, and LEDs
     DisplaySystemConfig config = build_display_config();

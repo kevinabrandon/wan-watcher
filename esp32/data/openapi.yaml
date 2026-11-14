@@ -7,7 +7,7 @@ info:
 
     The ESP32 receives WAN metrics from a pfSense daemon and provides local network
     monitoring via its own pinger.
-  version: 1.1.4
+  version: 1.2.0
   contact:
     url: https://github.com/kevinabrandon/wan-watcher
 
@@ -397,6 +397,8 @@ components:
           $ref: '#/components/schemas/LocalMetrics'
         freshness:
           $ref: '#/components/schemas/FreshnessInfo'
+        top_talkers:
+          $ref: '#/components/schemas/TopTalkers'
 
     WanUpdatePayload:
       type: object
@@ -473,7 +475,7 @@ components:
         Optional. Top LAN hosts by bandwidth, one list per bandwidth window
         (keys match the `/api/bw-source` values). Derived from pf state byte
         counters on the router, so values are an approximation of current usage.
-        Currently accepted and ignored by the ESP32.
+        Stored by the ESP32 and returned unchanged in `GET /api/status`.
       properties:
         15s:
           type: array
