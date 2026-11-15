@@ -309,17 +309,34 @@ build_host_names() {
                                     sub(/^<!\[CDATA\[/,"",ds); sub(/\]\]>$/,"",ds) }
             /<\/staticmap>/ { if (ip != "") print ip, (hn != "" ? hn : ds); inmap=0 }
         ' /conf/config.xml 2>/dev/null
-        for LEASES in /var/lib/kea/dhcp4.leases /var/db/kea/dhcp4.leases; do
-            [ -f "$LEASES" ] && awk -F, '
-                NR > 1 && $9 != "" { h=$9; sub(/\.$/,"",h); n[$1]=h }
+        # Kea's memfile backend spreads leases over dhcp4.leases plus the files its
+        # lease-file cleanup leaves behind (.completed, .1, .2). A pool address is
+        # reused by different devices over time, so only current leases count:
+        # state 0 (default) and not yet expired, newest expiry wins.
+        KEA_FOUND=0
+        for KEA_DIR in /var/lib/kea /var/db/kea; do
+            [ -f "$KEA_DIR/dhcp4.leases" ] || continue
+            KEA_FOUND=1
+            cat "$KEA_DIR"/dhcp4.leases.completed "$KEA_DIR"/dhcp4.leases.2 "$KEA_DIR"/dhcp4.leases.1 \
+                "$KEA_DIR"/dhcp4.leases 2>/dev/null | awk -F, -v now="$(date +%s)" '
+                $1 == "address" { next }                      # header line of each file
+                $10 != 0 || $5 <= now || $9 == "" { next }    # not an active lease, or no hostname
+                $5 >= best[$1] { best[$1]=$5; h=$9; sub(/\.$/,"",h); n[$1]=h }
                 END { for (ip in n) print ip, n[ip] }
-            ' "$LEASES"
+            '
+            break
         done
-        [ -f /var/dhcpd/var/db/dhcpd.leases ] && awk '
-            /^lease / { ip=$2 }
-            /client-hostname/ { h=$2; gsub(/[";]/,"",h); if (ip != "") n[ip]=h }
-            END { for (ip in n) print ip, n[ip] }
-        ' /var/dhcpd/var/db/dhcpd.leases
+        # ISC dhcpd (pfSense < 23.09 / "ISC DHCP" backend): the file lingers after a
+        # switch to Kea, so it is only consulted when no Kea lease file exists.
+        if [ "$KEA_FOUND" -eq 0 ] && [ -f /var/dhcpd/var/db/dhcpd.leases ]; then
+            awk -v now="$(date -u +%Y/%m/%d\ %H:%M:%S)" '
+                /^lease / { ip=$2; ends=""; host="" }
+                /^ *ends / { ends=$3 " " $4; sub(/;.*/,"",ends) }
+                /client-hostname/ { host=$2; gsub(/[";]/,"",host) }
+                /^}/ { if (ip != "" && host != "" && ends > now) n[ip]=host }
+                END { for (ip in n) print ip, n[ip] }
+            ' /var/dhcpd/var/db/dhcpd.leases
+        fi
     } > "$HOSTS_NAMES" 2>/dev/null
 }
 
